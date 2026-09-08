@@ -1,4 +1,3 @@
-import reference from "../data/reference.json";
 import type {
   ComputedEquipment,
   ComputedEstimate,
@@ -12,45 +11,38 @@ import type {
   ProfitTier,
   TemplateType,
 } from "./types";
+import { getReference, type EquipmentRow, type StateRow, type WageRow } from "./reference";
 
-type WageRow = {
-  wageYr: number;
-  wageHr: number;
-  category: string;
-  stPrice: number;
-  otPrice: number;
-  st5ot: number;
-  st10ot: number;
-};
+export function getProfitTiers(): ProfitTier[] {
+  return getReference().profitTiers;
+}
 
-type StateRow = {
-  name: string;
-  abbr: string;
-  lodging: number;
-  meals: number;
-  colIndex: number;
-};
+export function getOtStructures(): OtStructure[] {
+  return getReference().otStructures;
+}
 
-type EquipmentRow = {
-  class: string;
-  name: string;
-  hourlyRate: number;
-};
+export function getStates(): StateRow[] {
+  return getReference().states;
+}
 
-const wages = reference.wages as WageRow[];
-const states = reference.states as StateRow[];
-const equipmentCatalog = reference.equipment as EquipmentRow[];
-const factors = reference.equipmentFactors as {
-  dailyHours: number;
-  weeklyHours: number;
-  monthlyHours: number;
-};
+export function getEquipmentCatalog(): EquipmentRow[] {
+  return getReference().equipment;
+}
 
-export const PROFIT_TIERS = reference.profitTiers as ProfitTier[];
-export const OT_STRUCTURES = reference.otStructures as OtStructure[];
-export const STATES = states;
-export const EQUIPMENT_CATALOG = equipmentCatalog;
-export const STANDARD_TERMS = reference.standardTerms as string[];
+export function getStandardTerms(): string[] {
+  return getReference().standardTerms;
+}
+
+/** @deprecated Prefer getProfitTiers() for live admin updates */
+export const PROFIT_TIERS = getProfitTiers();
+/** @deprecated Prefer getOtStructures() for live admin updates */
+export const OT_STRUCTURES = getOtStructures();
+/** @deprecated Prefer getStates() for live admin updates */
+export const STATES = getStates();
+/** @deprecated Prefer getEquipmentCatalog() for live admin updates */
+export const EQUIPMENT_CATALOG = getEquipmentCatalog();
+/** @deprecated Prefer getStandardTerms() for live admin updates */
+export const STANDARD_TERMS = getStandardTerms();
 
 export const FIXED_CHANGE_ORDER_TERM =
   "Any change in the project scope will necessitate a formal change order. In the absence of such a change order, any additional resources requested by the client outside the original bid will be billed at (T&E) rates.";
@@ -270,7 +262,7 @@ export function normalizeEstimate(raw: unknown): EstimateInput {
 }
 
 function findState(name: string): StateRow | undefined {
-  return states.find((s) => s.name === name || s.abbr === name);
+  return getReference().states.find((s) => s.name === name || s.abbr === name);
 }
 
 function ceiling(value: number, significance: number): number {
@@ -279,11 +271,13 @@ function ceiling(value: number, significance: number): number {
 }
 
 function lookupWage(category: string, wageYr: number): WageRow | undefined {
-  return wages.find((w) => w.category === category && w.wageYr === wageYr);
+  return getReference().wages.find(
+    (w) => w.category === category && w.wageYr === wageYr,
+  );
 }
 
 function catalogRate(name: string): EquipmentRow | undefined {
-  return equipmentCatalog.find((eq) => eq.name === name);
+  return getReference().equipment.find((eq) => eq.name === name);
 }
 
 /** Fixed Price NTE bill rate prefers blended contingency rates (Excel FP template). */
@@ -389,6 +383,7 @@ function computeEquipment(
       if (!baseHourly) return null;
 
       const adjustedHourly = baseHourly + baseHourly * colDelta;
+      const factors = getReference().equipmentFactors;
       const daily = adjustedHourly * factors.dailyHours;
       const weekly = adjustedHourly * factors.weeklyHours;
       const monthly = adjustedHourly * factors.monthlyHours;
@@ -486,9 +481,10 @@ export function computeEstimate(input: EstimateInput): ComputedEstimate {
     contingencyPct,
   };
 
+  const termsCatalog = getStandardTerms();
   const terms: string[] = [];
-  if (input.includeStandByTerm) terms.push(STANDARD_TERMS[0]);
-  if (!isFixed && input.includeHolidayTerm) terms.push(STANDARD_TERMS[1]);
+  if (input.includeStandByTerm) terms.push(termsCatalog[0]);
+  if (!isFixed && input.includeHolidayTerm) terms.push(termsCatalog[1]);
   if (isFixed && input.includeChangeOrderTerm) {
     terms.push(FIXED_CHANGE_ORDER_TERM);
   }
@@ -539,7 +535,7 @@ export function pct(value: number): string {
 }
 
 export function salaryOptions(): number[] {
-  const set = new Set(wages.map((w) => w.wageYr));
+  const set = new Set(getReference().wages.map((w) => w.wageYr));
   return Array.from(set).sort((a, b) => a - b);
 }
 
