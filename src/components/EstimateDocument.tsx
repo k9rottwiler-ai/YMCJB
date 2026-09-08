@@ -243,6 +243,53 @@ export function EstimateDocument({ input, computed }: Props) {
           </ol>
         )}
       </section>
+
+      <section className="doc-block signatures-block">
+        <h4>Authorization signatures</h4>
+        <p className="signatures-intro">
+          By signing below, each party acknowledges review of this estimate and
+          agrees to the rates, scope, and terms stated herein, subject to any
+          written amendments.
+        </p>
+        <div className="signatures-grid">
+          <div className="signature-col">
+            <div className="signature-party">Contractor / Provider</div>
+            <div className="signature-line">
+              <span>Signature</span>
+            </div>
+            <div className="signature-line">
+              <span>Printed name</span>
+              <strong className="signature-prefill">
+                {input.estimatorName || "\u00a0"}
+              </strong>
+            </div>
+            <div className="signature-line">
+              <span>Title</span>
+            </div>
+            <div className="signature-line">
+              <span>Date</span>
+            </div>
+          </div>
+          <div className="signature-col">
+            <div className="signature-party">Customer / Client</div>
+            <div className="signature-line">
+              <span>Signature</span>
+            </div>
+            <div className="signature-line">
+              <span>Printed name</span>
+              <strong className="signature-prefill">
+                {input.customerName || "\u00a0"}
+              </strong>
+            </div>
+            <div className="signature-line">
+              <span>Title</span>
+            </div>
+            <div className="signature-line">
+              <span>Date</span>
+            </div>
+          </div>
+        </div>
+      </section>
     </article>
   );
 }
