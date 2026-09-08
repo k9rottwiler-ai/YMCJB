@@ -11,6 +11,19 @@ Time & Equipment job estimate webapp (recreated from `BidSheet_TE_Template.xlsx`
 - Live printable estimate document + rate summary
 - Local browser persistence, demo data, JSON export
 
+## Web app
+
+**Live preview (current build):** https://quality-hart-structural-allowed.trycloudflare.com
+
+> This Cloudflare tunnel stays up while the cloud agent/session is running.
+
+**Stable GitHub Pages URL (after enabling Pages):** https://k9rottwiler-ai.github.io/YMCJB/
+
+A `gh-pages` branch with the production build is already published. To activate it:
+1. Open https://github.com/k9rottwiler-ai/YMCJB/settings/pages
+2. Set Source to **Deploy from a branch**
+3. Choose branch **`gh-pages`** / root (`/`) → Save
+
 ## Run locally
 
 ```bash
