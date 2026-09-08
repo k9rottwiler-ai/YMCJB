@@ -1,14 +1,16 @@
-# YMCJB — BidSheet T&E
+# YMCJB — BidSheet
 
-Time & Equipment job estimate webapp (recreated from `BidSheet_TE_Template.xlsx`).
+Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** templates (recreated from the Excel workbooks).
 
 ## Features
 
+- Template switcher: Time & Equipment rates sheet **or** Fixed Price not-to-exceed total
 - Estimate intake form (estimator, customer, scope, schedule, OT structure, profit tiers)
 - Add/remove personnel lines with wage-schedule salary bands and COL adjustment
+- Fixed Price: estimated weeks, estimate risk %, completion bonus / contingency %
 - Add catalog or custom equipment lines with COL-adjusted hourly / daily / weekly rates
 - Add unlimited additional approval items plus GSA lodging & meals per diem by project state
-- Live printable estimate document + rate summary
+- Live printable estimate document + rate / price summary
 - Local browser persistence, demo data, JSON export
 
 ## Web app
@@ -40,7 +42,7 @@ npm run preview
 
 ## Calculation notes
 
-Pricing logic mirrors the Excel workbook:
+Pricing logic mirrors the Excel workbooks:
 
 - Wage schedule ST/OT/contingency rates from annual salary × profit tier
 - COL delta = `(project COL − base COL) / 100`
@@ -48,3 +50,12 @@ Pricing logic mirrors the Excel workbook:
 - Equipment hourly rate adjusted by COL; daily ×8, weekly ×40
 - State COL indexes from MERIC / C2ER Q2 2026 composite
 - Per diem from state averages of FY27 GSA lodging / M&IE rates
+
+### Fixed Price extras
+
+- Personnel hours = estimated weeks × 40, then × (1 + risk%)
+- Personnel NTE amount = blended bill rate × adjusted hours (prefers 5OT/10OT contingency structures; “OT billed separately” uses the 10OT blended column for the NTE, matching the Excel FP sheet)
+- Equipment amount = weekly rate × qty × risk-adjusted weeks
+- Lodging / meals = weekly per diem × rooms or employees × risk-adjusted weeks
+- Contingency = subtotal × contingency %
+- Grand total = subtotal + contingency (not-to-exceed)
