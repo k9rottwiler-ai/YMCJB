@@ -10,6 +10,8 @@ Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** te
 - Fixed Price: estimated weeks, estimate risk %, completion bonus / contingency %
 - Add catalog or custom equipment lines with COL-adjusted hourly / daily / weekly rates
 - Add unlimited additional approval items plus GSA lodging & meals per diem by project state
+- **Administration** page to update wage rates, equipment rates, per diem, and COL indexes
+- CSV / JSON download templates + import; browser overrides with export for `reference.json`
 - Live printable estimate document + rate / price summary
 - Local browser persistence, demo data, JSON export
 
@@ -39,6 +41,25 @@ Build:
 npm run build
 npm run preview
 ```
+
+## Administration & templates
+
+Open **Administration** in the app header to:
+
+| Dataset | Edit UI | Template file |
+|--------|---------|----------------|
+| Per diem + COL | States table | `public/templates/perdiem-col-template.csv` |
+| Wage schedule rates | Filtered wage table | `public/templates/wage-rates-template.csv` |
+| Equipment rates | Catalog table + hour factors | `public/templates/equipment-rates-template.csv` |
+| Full bundle | Import/export JSON | `public/templates/reference-defaults.json` |
+
+CSV columns:
+
+- Per diem/COL: `name,abbr,lodging,meals,colIndex`
+- Wages: `category,wageYr,wageHr,stPrice,otPrice,st5ot,st10ot`
+- Equipment: `class,name,hourlyRate`
+
+Saves persist in the browser (`localStorage`). Export full JSON and replace `src/data/reference.json` to ship defaults to all users.
 
 ## Calculation notes
 
