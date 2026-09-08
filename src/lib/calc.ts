@@ -488,7 +488,7 @@ export function computeEstimate(input: EstimateInput): ComputedEstimate {
 
   const terms: string[] = [];
   if (input.includeStandByTerm) terms.push(STANDARD_TERMS[0]);
-  if (input.includeHolidayTerm) terms.push(STANDARD_TERMS[1]);
+  if (!isFixed && input.includeHolidayTerm) terms.push(STANDARD_TERMS[1]);
   if (isFixed && input.includeChangeOrderTerm) {
     terms.push(FIXED_CHANGE_ORDER_TERM);
   }
@@ -560,11 +560,8 @@ export function switchTemplateType(
     estimateNumber: numberLooksAuto
       ? `${prefix}-${today.replaceAll("-", "")}-001`
       : current.estimateNumber,
-    otStructure:
-      templateType === "fixed" &&
-      current.otStructure === "OT Billed Separately"
-        ? "40ST + 10OT Labor Contingency"
-        : current.otStructure,
+    // Keep OT structure and holiday-term preference intact across switches so
+    // previewing Fixed Price does not rewrite the T&E rate sheet settings.
     estimateRiskPct:
       current.estimateRiskPct === "" || current.estimateRiskPct == null
         ? templateType === "fixed"
@@ -589,8 +586,6 @@ export function switchTemplateType(
           ? Math.max(1, current.personnel.filter((p) => p.role || p.name).length)
           : ""
         : current.mealsEmployees,
-    includeHolidayTerm:
-      templateType === "te" ? current.includeHolidayTerm : false,
     includeChangeOrderTerm:
       templateType === "fixed" ? true : current.includeChangeOrderTerm,
   };
