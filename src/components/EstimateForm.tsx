@@ -1,9 +1,18 @@
-import type { EstimateInput, PersonnelSlot } from "../lib/types";
+import type {
+  EquipmentSlot,
+  EstimateInput,
+  ExtraItem,
+  PersonnelSlot,
+} from "../lib/types";
 import {
   EQUIPMENT_CATALOG,
+  EXTRA_ITEM_PRESETS,
   OT_STRUCTURES,
   PROFIT_TIERS,
   STATES,
+  emptyEquipmentSlot,
+  emptyExtraItem,
+  emptyPersonnelSlot,
   salaryOptions,
 } from "../lib/calc";
 
@@ -33,8 +42,33 @@ function updatePersonnel(
   onChange({ ...value, personnel });
 }
 
+function updateEquipment(
+  value: EstimateInput,
+  onChange: Props["onChange"],
+  index: number,
+  patch: Partial<EquipmentSlot>,
+) {
+  const equipmentRows = value.equipmentRows.map((row, i) =>
+    i === index ? { ...row, ...patch } : row,
+  );
+  onChange({ ...value, equipmentRows });
+}
+
+function updateExtraItem(
+  value: EstimateInput,
+  onChange: Props["onChange"],
+  index: number,
+  patch: Partial<ExtraItem>,
+) {
+  const extraItems = value.extraItems.map((row, i) =>
+    i === index ? { ...row, ...patch } : row,
+  );
+  onChange({ ...value, extraItems });
+}
+
 export function EstimateForm({ value, onChange }: Props) {
   const salaries = salaryOptions();
+  const catalogNames = new Set(EQUIPMENT_CATALOG.map((eq) => eq.name));
 
   return (
     <div className="panel-body">
@@ -305,11 +339,27 @@ export function EstimateForm({ value, onChange }: Props) {
       </section>
 
       <section className="section">
-        <h3>Personnel</h3>
-        <p className="hint">
-          Up to 7 resources. Salary selects from the wage schedule; COL adjusts
-          to the nearest $5,000 band.
-        </p>
+        <div className="section-head">
+          <div>
+            <h3>Personnel</h3>
+            <p className="hint">
+              Add manpower lines as needed. Salary selects from the wage
+              schedule; COL adjusts to the nearest $5,000 band.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-small"
+            onClick={() =>
+              onChange({
+                ...value,
+                personnel: [...value.personnel, emptyPersonnelSlot()],
+              })
+            }
+          >
+            Add personnel
+          </button>
+        </div>
         <div className="grid">
           {value.personnel.map((slot, index) => (
             <div className="person-row" key={index}>
@@ -346,7 +396,8 @@ export function EstimateForm({ value, onChange }: Props) {
                   value={slot.salary === "" ? "" : String(slot.salary)}
                   onChange={(e) =>
                     updatePersonnel(value, onChange, index, {
-                      salary: e.target.value === "" ? "" : Number(e.target.value),
+                      salary:
+                        e.target.value === "" ? "" : Number(e.target.value),
                     })
                   }
                 >
@@ -358,48 +409,206 @@ export function EstimateForm({ value, onChange }: Props) {
                   ))}
                 </select>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="section">
-        <h3>Equipment</h3>
-        <div className="grid">
-          {EQUIPMENT_CATALOG.map((eq) => (
-            <div className="equip-row" key={eq.name}>
-              <div>
-                <strong>{eq.name}</strong>
-                <div className="muted" style={{ color: "var(--ink-muted)" }}>
-                  {eq.class} · base {eq.hourlyRate}/hr
-                </div>
-              </div>
-              <div className="field">
-                <label htmlFor={`eq-${eq.name}`}>Qty</label>
-                <input
-                  id={`eq-${eq.name}`}
-                  type="number"
-                  min={0}
-                  value={value.equipmentCounts[eq.name] ?? 0}
-                  onChange={(e) =>
+              <div className="row-actions">
+                <button
+                  type="button"
+                  className="btn btn-small"
+                  disabled={value.personnel.length <= 1}
+                  onClick={() =>
                     onChange({
                       ...value,
-                      equipmentCounts: {
-                        ...value.equipmentCounts,
-                        [eq.name]: Math.max(0, Number(e.target.value) || 0),
-                      },
+                      personnel: value.personnel.filter((_, i) => i !== index),
                     })
                   }
-                />
+                >
+                  Remove
+                </button>
               </div>
-              <div />
             </div>
           ))}
         </div>
       </section>
 
       <section className="section">
-        <h3>Additional items</h3>
+        <div className="section-head">
+          <div>
+            <h3>Equipment</h3>
+            <p className="hint">
+              Add catalog or custom equipment lines. Custom rows need an hourly
+              rate; catalog rates are COL-adjusted automatically.
+            </p>
+          </div>
+          <div className="section-actions">
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={() =>
+                onChange({
+                  ...value,
+                  equipmentRows: [
+                    ...value.equipmentRows,
+                    {
+                      ...emptyEquipmentSlot(),
+                      name: EQUIPMENT_CATALOG[0]?.name ?? "",
+                    },
+                  ],
+                })
+              }
+            >
+              Add catalog item
+            </button>
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={() =>
+                onChange({
+                  ...value,
+                  equipmentRows: [
+                    ...value.equipmentRows,
+                    { name: "", count: 1, customHourly: 0 },
+                  ],
+                })
+              }
+            >
+              Add custom item
+            </button>
+          </div>
+        </div>
+        <div className="grid">
+          {value.equipmentRows.length === 0 ? (
+            <p className="hint">No equipment added yet.</p>
+          ) : null}
+          {value.equipmentRows.map((slot, index) => {
+            const isCustom =
+              slot.customHourly !== "" ||
+              (slot.name !== "" && !catalogNames.has(slot.name));
+            const catalog = EQUIPMENT_CATALOG.find((eq) => eq.name === slot.name);
+            return (
+              <div className="equip-row" key={index}>
+                {isCustom ? (
+                  <>
+                    <div className="field">
+                      <label htmlFor={`eq-name-${index}`}>
+                        Custom equipment (E{index + 1})
+                      </label>
+                      <input
+                        id={`eq-name-${index}`}
+                        value={slot.name}
+                        placeholder="Equipment name"
+                        onChange={(e) =>
+                          updateEquipment(value, onChange, index, {
+                            name: e.target.value,
+                            customHourly:
+                              slot.customHourly === "" ? 0 : slot.customHourly,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`eq-rate-${index}`}>Hourly rate</label>
+                      <input
+                        id={`eq-rate-${index}`}
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={slot.customHourly === "" ? "" : slot.customHourly}
+                        onChange={(e) =>
+                          updateEquipment(value, onChange, index, {
+                            customHourly:
+                              e.target.value === ""
+                                ? ""
+                                : Math.max(0, Number(e.target.value) || 0),
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="field">
+                    <label htmlFor={`eq-name-${index}`}>
+                      Equipment (E{index + 1})
+                    </label>
+                    <select
+                      id={`eq-name-${index}`}
+                      value={slot.name}
+                      onChange={(e) =>
+                        updateEquipment(value, onChange, index, {
+                          name: e.target.value,
+                          customHourly: "",
+                        })
+                      }
+                    >
+                      <option value="">— Select —</option>
+                      {EQUIPMENT_CATALOG.map((eq) => (
+                        <option key={eq.name} value={eq.name}>
+                          {eq.name} · {eq.class} · ${eq.hourlyRate}/hr
+                        </option>
+                      ))}
+                    </select>
+                    {catalog ? (
+                      <div className="muted field-note">
+                        Base {catalog.hourlyRate}/hr before COL
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+                <div className="field">
+                  <label htmlFor={`eq-qty-${index}`}>Qty</label>
+                  <input
+                    id={`eq-qty-${index}`}
+                    type="number"
+                    min={0}
+                    value={slot.count}
+                    onChange={(e) =>
+                      updateEquipment(value, onChange, index, {
+                        count: Math.max(0, Number(e.target.value) || 0),
+                      })
+                    }
+                  />
+                </div>
+                <div className="row-actions">
+                  <button
+                    type="button"
+                    className="btn btn-small"
+                    onClick={() =>
+                      onChange({
+                        ...value,
+                        equipmentRows: value.equipmentRows.filter(
+                          (_, i) => i !== index,
+                        ),
+                      })
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <div>
+            <h3>Additional items</h3>
+            <p className="hint">
+              Toggle lodging/meals, then add any other reimbursable lines.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-small"
+            onClick={() =>
+              onChange({
+                ...value,
+                extraItems: [...value.extraItems, emptyExtraItem()],
+              })
+            }
+          >
+            Add item
+          </button>
+        </div>
         <div className="grid grid-2">
           <label className="check-row">
             <input
@@ -422,70 +631,60 @@ export function EstimateForm({ value, onChange }: Props) {
             Include meals &amp; incidentals
           </label>
         </div>
-        <div className="grid grid-2">
-          <div className="field">
-            <label htmlFor="rentalVehicle">
-              Rental vehicle (client prior approval)
-            </label>
-            <input
-              id="rentalVehicle"
-              value={value.rentalVehicle}
-              onChange={(e) =>
-                updateField(value, onChange, "rentalVehicle", e.target.value)
-              }
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="airFare">Air fare (client prior approval)</label>
-            <input
-              id="airFare"
-              value={value.airFare}
-              onChange={(e) =>
-                updateField(value, onChange, "airFare", e.target.value)
-              }
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="rentalEquipment">
-              Rental equipment (client prior approval)
-            </label>
-            <input
-              id="rentalEquipment"
-              value={value.rentalEquipment}
-              onChange={(e) =>
-                updateField(value, onChange, "rentalEquipment", e.target.value)
-              }
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="supportPurchases">
-              Support purchases (client prior approval)
-            </label>
-            <input
-              id="supportPurchases"
-              value={value.supportPurchases}
-              onChange={(e) =>
-                updateField(value, onChange, "supportPurchases", e.target.value)
-              }
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="backgroundScreenings">
-              Background / drug screenings, memberships
-            </label>
-            <input
-              id="backgroundScreenings"
-              value={value.backgroundScreenings}
-              onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "backgroundScreenings",
-                  e.target.value,
-                )
-              }
-            />
-          </div>
+        <div className="grid">
+          {value.extraItems.length === 0 ? (
+            <p className="hint">No extra approval items added yet.</p>
+          ) : null}
+          {value.extraItems.map((item, index) => (
+            <div className="extra-row" key={index}>
+              <div className="field">
+                <label htmlFor={`extra-label-${index}`}>Item label</label>
+                <input
+                  id={`extra-label-${index}`}
+                  list={`extra-presets-${index}`}
+                  value={item.label}
+                  placeholder="e.g. Rental vehicle"
+                  onChange={(e) =>
+                    updateExtraItem(value, onChange, index, {
+                      label: e.target.value,
+                    })
+                  }
+                />
+                <datalist id={`extra-presets-${index}`}>
+                  {EXTRA_ITEM_PRESETS.map((preset) => (
+                    <option key={preset} value={preset} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="field">
+                <label htmlFor={`extra-notes-${index}`}>Notes / approval</label>
+                <input
+                  id={`extra-notes-${index}`}
+                  value={item.notes}
+                  placeholder="As needed / client prior approval"
+                  onChange={(e) =>
+                    updateExtraItem(value, onChange, index, {
+                      notes: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="row-actions">
+                <button
+                  type="button"
+                  className="btn btn-small"
+                  onClick={() =>
+                    onChange({
+                      ...value,
+                      extraItems: value.extraItems.filter((_, i) => i !== index),
+                    })
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

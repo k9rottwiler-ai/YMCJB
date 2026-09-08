@@ -3,7 +3,9 @@ import type {
   ComputedEquipment,
   ComputedEstimate,
   ComputedPersonnel,
+  EquipmentSlot,
   EstimateInput,
+  ExtraItem,
   OtStructure,
   PersonnelSlot,
   ProfitTier,
@@ -48,18 +50,32 @@ export const STATES = states;
 export const EQUIPMENT_CATALOG = equipmentCatalog;
 export const STANDARD_TERMS = reference.standardTerms as string[];
 
+export const EXTRA_ITEM_PRESETS = [
+  "Rental Vehicle (Client Prior Approval Required)",
+  "Air Fare (Client Prior Approval Required)",
+  "Rental Equipment (Client Prior Approval Required)",
+  "Support Purchases (Client Prior Approval Required)",
+  "Background/Drug Screenings, Memberships (Client Prior Approval Required)",
+] as const;
+
+export function emptyPersonnelSlot(): PersonnelSlot {
+  return { role: "", name: "", salary: "" };
+}
+
+export function emptyEquipmentSlot(): EquipmentSlot {
+  return { name: "", count: 1, customHourly: "" };
+}
+
+export function emptyExtraItem(): ExtraItem {
+  return { label: "", notes: "" };
+}
+
 export function createEmptyPersonnel(): PersonnelSlot[] {
-  return Array.from({ length: 7 }, () => ({
-    role: "",
-    name: "",
-    salary: "",
-  }));
+  return [emptyPersonnelSlot()];
 }
 
 export function createDefaultEstimate(): EstimateInput {
   const today = new Date().toISOString().slice(0, 10);
-  const counts: Record<string, number> = {};
-  for (const eq of equipmentCatalog) counts[eq.name] = 0;
 
   return {
     id: crypto.randomUUID(),
@@ -83,17 +99,92 @@ export function createDefaultEstimate(): EstimateInput {
     stProfit: "MED",
     otProfit: "MED",
     personnel: createEmptyPersonnel(),
-    equipmentCounts: counts,
+    equipmentRows: [],
     includeLodging: true,
     includeMeals: true,
-    rentalVehicle: "",
-    airFare: "",
-    rentalEquipment: "",
-    supportPurchases: "",
-    backgroundScreenings: "",
+    extraItems: [],
     includeStandByTerm: true,
     includeHolidayTerm: true,
     additionalTerms: ["", "", "", ""],
+  };
+}
+
+/** Normalize older saved estimates (equipmentCounts / fixed extra fields). */
+export function normalizeEstimate(raw: unknown): EstimateInput {
+  const base = createDefaultEstimate();
+  if (!raw || typeof raw !== "object") return base;
+
+  const parsed = raw as Partial<EstimateInput> & {
+    equipmentCounts?: Record<string, number>;
+    rentalVehicle?: string;
+    airFare?: string;
+    rentalEquipment?: string;
+    supportPurchases?: string;
+    backgroundScreenings?: string;
+  };
+
+  let equipmentRows = Array.isArray(parsed.equipmentRows)
+    ? parsed.equipmentRows.map((row) => ({
+        name: row?.name ?? "",
+        count: Math.max(0, Number(row?.count) || 0),
+        customHourly:
+          row?.customHourly === "" || row?.customHourly == null
+            ? ("" as const)
+            : Number(row.customHourly),
+      }))
+    : null;
+
+  if (!equipmentRows && parsed.equipmentCounts) {
+    equipmentRows = Object.entries(parsed.equipmentCounts)
+      .filter(([, count]) => Number(count) > 0)
+      .map(([name, count]) => ({
+        name,
+        count: Number(count),
+        customHourly: "" as const,
+      }));
+  }
+
+  let extraItems = Array.isArray(parsed.extraItems)
+    ? parsed.extraItems.map((row) => ({
+        label: row?.label ?? "",
+        notes: row?.notes ?? "",
+      }))
+    : null;
+
+  if (!extraItems) {
+    const legacy: [string, string | undefined][] = [
+      [EXTRA_ITEM_PRESETS[0], parsed.rentalVehicle],
+      [EXTRA_ITEM_PRESETS[1], parsed.airFare],
+      [EXTRA_ITEM_PRESETS[2], parsed.rentalEquipment],
+      [EXTRA_ITEM_PRESETS[3], parsed.supportPurchases],
+      [EXTRA_ITEM_PRESETS[4], parsed.backgroundScreenings],
+    ];
+    extraItems = legacy
+      .filter(([, notes]) => Boolean(notes && String(notes).trim()))
+      .map(([label, notes]) => ({ label, notes: String(notes) }));
+  }
+
+  const personnel =
+    Array.isArray(parsed.personnel) && parsed.personnel.length > 0
+      ? parsed.personnel.map((slot) => ({
+          role: slot?.role ?? "",
+          name: slot?.name ?? "",
+          salary:
+            slot?.salary === "" || slot?.salary == null
+              ? ("" as const)
+              : Number(slot.salary),
+        }))
+      : createEmptyPersonnel();
+
+  return {
+    ...base,
+    ...parsed,
+    personnel,
+    equipmentRows: equipmentRows ?? [],
+    extraItems: extraItems ?? [],
+    additionalTerms: Array.isArray(parsed.additionalTerms)
+      ? parsed.additionalTerms
+      : base.additionalTerms,
   };
 }
 
@@ -110,12 +201,16 @@ function lookupWage(category: string, wageYr: number): WageRow | undefined {
   return wages.find((w) => w.category === category && w.wageYr === wageYr);
 }
 
+function catalogRate(name: string): EquipmentRow | undefined {
+  return equipmentCatalog.find((eq) => eq.name === name);
+}
+
 function computePersonnel(
   input: EstimateInput,
   colDelta: number,
 ): ComputedPersonnel[] {
   return input.personnel
-    .map((slot, index) => {
+    .map((slot) => {
       const salary =
         typeof slot.salary === "number"
           ? slot.salary
@@ -146,7 +241,7 @@ function computePersonnel(
       }
 
       return {
-        item: `M${index + 1}`,
+        item: "",
         name: slot.name,
         role: slot.role,
         salary,
@@ -160,31 +255,44 @@ function computePersonnel(
         billedOt,
       } satisfies ComputedPersonnel;
     })
-    .filter((row): row is ComputedPersonnel => row !== null);
+    .filter((row): row is ComputedPersonnel => row !== null)
+    .map((row, index) => ({ ...row, item: `M${index + 1}` }));
 }
 
 function computeEquipment(
   input: EstimateInput,
   colDelta: number,
 ): ComputedEquipment[] {
-  return equipmentCatalog
-    .map((eq, index) => {
-      const count = Number(input.equipmentCounts[eq.name] ?? 0);
-      if (!count) return null;
-      const adjustedHourly = eq.hourlyRate + eq.hourlyRate * colDelta;
+  return input.equipmentRows
+    .map((slot) => {
+      const count = Number(slot.count) || 0;
+      const name = slot.name.trim();
+      if (!count || !name) return null;
+
+      const catalog = catalogRate(name);
+      const customHourly =
+        slot.customHourly === "" ? null : Number(slot.customHourly);
+      const baseHourly =
+        customHourly != null && Number.isFinite(customHourly) && customHourly > 0
+          ? customHourly
+          : (catalog?.hourlyRate ?? 0);
+      if (!baseHourly) return null;
+
+      const adjustedHourly = baseHourly + baseHourly * colDelta;
       return {
-        item: `E${index + 1}`,
-        className: eq.class,
-        name: eq.name,
+        item: "",
+        className: catalog?.class ?? "Custom",
+        name,
         count,
-        baseHourly: eq.hourlyRate,
+        baseHourly,
         adjustedHourly,
         daily: adjustedHourly * factors.dailyHours,
         weekly: adjustedHourly * factors.weeklyHours,
         monthly: adjustedHourly * factors.monthlyHours,
       } satisfies ComputedEquipment;
     })
-    .filter((row): row is ComputedEquipment => row !== null);
+    .filter((row): row is ComputedEquipment => row !== null)
+    .map((row, index) => ({ ...row, item: `E${index + 1}` }));
 }
 
 export function computeEstimate(input: EstimateInput): ComputedEstimate {
@@ -194,7 +302,7 @@ export function computeEstimate(input: EstimateInput): ComputedEstimate {
   const projectCol = project?.colIndex ?? 100;
   const colDelta = (projectCol - baseCol) / 100;
 
-  const lodgingDaily = project?.lodging ?? 110;
+  const lodgingDaily = project?.lodging ?? 113;
   const mealsDaily = project?.meals ?? 68;
 
   const terms: string[] = [];
