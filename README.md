@@ -1,6 +1,6 @@
-# BidSheet T&E Webapp
+# YMCJB — BidSheet T&E
 
-Web recreation of `BidSheet_TE_Template.xlsx` for Time & Equipment job estimates.
+Time & Equipment job estimate webapp (recreated from `BidSheet_TE_Template.xlsx`).
 
 ## Features
 
@@ -14,7 +14,6 @@ Web recreation of `BidSheet_TE_Template.xlsx` for Time & Equipment job estimates
 ## Run locally
 
 ```bash
-cd bidsheet-te
 npm install
 npm run dev
 ```
