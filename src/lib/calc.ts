@@ -194,7 +194,7 @@ export function computeEstimate(input: EstimateInput): ComputedEstimate {
   const projectCol = project?.colIndex ?? 100;
   const colDelta = (projectCol - baseCol) / 100;
 
-  const lodgingDaily = project?.lodging ?? 110;
+  const lodgingDaily = project?.lodging ?? 113;
   const mealsDaily = project?.meals ?? 68;
 
   const terms: string[] = [];

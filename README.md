@@ -33,4 +33,4 @@ Pricing logic mirrors the Excel workbook:
 - COL delta = `(project COL − base COL) / 100`
 - Adjusted salary = ceiling to nearest $5,000 after COL
 - Equipment hourly rate adjusted by COL; daily ×8, weekly ×40
-- Per diem from state averages of FY25 GSA lodging / M&IE rates
+- Per diem from state averages of FY27 GSA lodging / M&IE rates
