@@ -15,7 +15,7 @@ Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** te
 
 ## Web app
 
-**Live preview (current build):** https://quality-hart-structural-allowed.trycloudflare.com
+**Live preview (current build):** https://forum-motivation-told-poetry.trycloudflare.com
 
 > This Cloudflare tunnel stays up while the cloud agent/session is running.
 
