@@ -1,3 +1,5 @@
+export type TemplateType = "te" | "fixed";
+
 export type ProfitTier =
   | "MINIMUM"
   | "LOW"
@@ -15,6 +17,8 @@ export interface PersonnelSlot {
   role: string;
   name: string;
   salary: number | "";
+  /** Fixed Price: estimated weeks on the job (hours = weeks × 40). */
+  estimatedWeeks: number | "";
 }
 
 export interface EquipmentSlot {
@@ -23,15 +27,20 @@ export interface EquipmentSlot {
   count: number;
   /** When set, treats the row as custom equipment (not from the catalog). */
   customHourly: number | "";
+  /** Fixed Price: estimated weeks on the job. */
+  estimatedWeeks: number | "";
 }
 
 export interface ExtraItem {
   label: string;
   notes: string;
+  /** Fixed Price: optional dollar amount rolled into the NTE total. */
+  amount: number | "";
 }
 
 export interface EstimateInput {
   id: string;
+  templateType: TemplateType;
   estimatorName: string;
   estimatorPhone: string;
   estimatorEmail: string;
@@ -51,13 +60,23 @@ export interface EstimateInput {
   otStructure: OtStructure;
   stProfit: ProfitTier;
   otProfit: ProfitTier;
+  /** Fixed Price: risk fraction as percent (e.g. 10 = 10%). */
+  estimateRiskPct: number | "";
+  /** Fixed Price: completion bonus / contingency as percent of subtotal. */
+  contingencyPct: number | "";
   personnel: PersonnelSlot[];
   equipmentRows: EquipmentSlot[];
   includeLodging: boolean;
   includeMeals: boolean;
+  lodgingRooms: number | "";
+  lodgingWeeks: number | "";
+  mealsEmployees: number | "";
+  mealsWeeks: number | "";
   extraItems: ExtraItem[];
   includeStandByTerm: boolean;
   includeHolidayTerm: boolean;
+  /** Fixed Price: change-order / out-of-scope billed at T&E rates. */
+  includeChangeOrderTerm: boolean;
   additionalTerms: string[];
 }
 
@@ -74,6 +93,12 @@ export interface ComputedPersonnel {
   st10ot: number;
   billedSt: number;
   billedOt: number;
+  /** Rate used for Fixed Price NTE amount (blended when applicable). */
+  nteRate: number;
+  estimatedWeeks: number;
+  baseHours: number;
+  adjustedHours: number;
+  estimateAmount: number;
 }
 
 export interface ComputedEquipment {
@@ -86,6 +111,9 @@ export interface ComputedEquipment {
   daily: number;
   weekly: number;
   monthly: number;
+  estimatedWeeks: number;
+  adjustedWeeks: number;
+  estimateAmount: number;
 }
 
 export interface ComputedPerDiem {
@@ -95,6 +123,26 @@ export interface ComputedPerDiem {
   mealsDaily: number;
   mealsWeekly: number;
   mealsMonthly: number;
+  lodgingRooms: number;
+  lodgingWeeks: number;
+  lodgingAdjustedWeeks: number;
+  lodgingAmount: number;
+  mealsEmployees: number;
+  mealsWeeks: number;
+  mealsAdjustedWeeks: number;
+  mealsAmount: number;
+}
+
+export interface ComputedFixedTotals {
+  personnelTotal: number;
+  equipmentTotal: number;
+  lodgingMealsTotal: number;
+  extrasTotal: number;
+  subtotal: number;
+  contingencyAmount: number;
+  grandTotal: number;
+  riskFactor: number;
+  contingencyPct: number;
 }
 
 export interface ComputedEstimate {
@@ -104,5 +152,7 @@ export interface ComputedEstimate {
   personnel: ComputedPersonnel[];
   equipment: ComputedEquipment[];
   perDiem: ComputedPerDiem;
+  extras: { label: string; notes: string; amount: number }[];
+  fixedTotals: ComputedFixedTotals;
   terms: string[];
 }

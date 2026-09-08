@@ -18,13 +18,17 @@ function formatDate(value: string): string {
 }
 
 export function EstimateDocument({ input, computed }: Props) {
-  const extras = input.extraItems.filter(
-    (row) => row.label.trim() || row.notes.trim(),
-  );
+  const isFixed = input.templateType === "fixed";
+  const extras = computed.extras;
+  const totals = computed.fixedTotals;
 
   return (
     <article className="doc" id="estimate-document">
-      <h1 className="doc-title">Job Estimate — Time and Equipment</h1>
+      <h1 className="doc-title">
+        {isFixed
+          ? "Job Estimate — Fixed Price | Not to Exceed"
+          : "Job Estimate — Time and Equipment"}
+      </h1>
 
       <div className="doc-meta">
         <div>
@@ -39,6 +43,13 @@ export function EstimateDocument({ input, computed }: Props) {
         <div>
           <strong>OT structure:</strong> {input.otStructure}
         </div>
+        {isFixed ? (
+          <div>
+            <strong>Estimate risk:</strong>{" "}
+            {input.estimateRiskPct === "" ? "—" : `${input.estimateRiskPct}%`}{" "}
+            (factor {totals.riskFactor.toFixed(2)})
+          </div>
+        ) : null}
       </div>
 
       <section className="doc-block">
@@ -95,6 +106,41 @@ export function EstimateDocument({ input, computed }: Props) {
         <h4>Personnel</h4>
         {computed.personnel.length === 0 ? (
           <p className="empty">No personnel selected.</p>
+        ) : isFixed ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Weeks</th>
+                <th>Adj. hours</th>
+                <th>Rate</th>
+                <th>Estimate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {computed.personnel.map((row) => (
+                <tr key={row.item}>
+                  <td>{row.item}</td>
+                  <td>{row.name || "—"}</td>
+                  <td>{row.role || "—"}</td>
+                  <td>{row.estimatedWeeks || "—"}</td>
+                  <td>{row.adjustedHours ? row.adjustedHours.toFixed(1) : "—"}</td>
+                  <td>{money(row.nteRate)}/hr</td>
+                  <td>{money(row.estimateAmount)}</td>
+                </tr>
+              ))}
+              <tr>
+                <th colSpan={6} style={{ textAlign: "right" }}>
+                  Personnel total
+                </th>
+                <td>
+                  <strong>{money(totals.personnelTotal)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         ) : (
           <table>
             <thead>
@@ -129,6 +175,39 @@ export function EstimateDocument({ input, computed }: Props) {
         <h4>Equipment</h4>
         {computed.equipment.length === 0 ? (
           <p className="empty">No equipment selected.</p>
+        ) : isFixed ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Equipment</th>
+                <th>Qty</th>
+                <th>Weeks</th>
+                <th>Weekly</th>
+                <th>Estimate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {computed.equipment.map((row) => (
+                <tr key={row.item}>
+                  <td>{row.item}</td>
+                  <td>{row.name}</td>
+                  <td>{row.count}</td>
+                  <td>{row.estimatedWeeks || "—"}</td>
+                  <td>{money(row.weekly, 2)}</td>
+                  <td>{money(row.estimateAmount)}</td>
+                </tr>
+              ))}
+              <tr>
+                <th colSpan={5} style={{ textAlign: "right" }}>
+                  Equipment total
+                </th>
+                <td>
+                  <strong>{money(totals.equipmentTotal)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         ) : (
           <table>
             <thead>
@@ -166,9 +245,19 @@ export function EstimateDocument({ input, computed }: Props) {
             <tr>
               <th>Item</th>
               <th>Description</th>
-              <th>Daily</th>
-              <th>Weekly</th>
-              <th>Monthly</th>
+              {isFixed ? (
+                <>
+                  <th>Qty / units</th>
+                  <th>Weeks</th>
+                  <th>Estimate</th>
+                </>
+              ) : (
+                <>
+                  <th>Daily</th>
+                  <th>Weekly</th>
+                  <th>Monthly</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -181,9 +270,19 @@ export function EstimateDocument({ input, computed }: Props) {
                   <tr key="lodging">
                     <td>A{itemNo}</td>
                     <td>Lodging</td>
-                    <td>{money(computed.perDiem.lodgingDaily)}</td>
-                    <td>{money(computed.perDiem.lodgingWeekly)}</td>
-                    <td>{money(computed.perDiem.lodgingMonthly)}</td>
+                    {isFixed ? (
+                      <>
+                        <td>{computed.perDiem.lodgingRooms || "—"} rooms</td>
+                        <td>{computed.perDiem.lodgingWeeks || "—"}</td>
+                        <td>{money(computed.perDiem.lodgingAmount)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td>{money(computed.perDiem.lodgingDaily)}</td>
+                        <td>{money(computed.perDiem.lodgingWeekly)}</td>
+                        <td>{money(computed.perDiem.lodgingMonthly)}</td>
+                      </>
+                    )}
                   </tr>,
                 );
               }
@@ -193,9 +292,19 @@ export function EstimateDocument({ input, computed }: Props) {
                   <tr key="meals">
                     <td>A{itemNo}</td>
                     <td>Meals and Incidentals</td>
-                    <td>{money(computed.perDiem.mealsDaily)}</td>
-                    <td>{money(computed.perDiem.mealsWeekly)}</td>
-                    <td>{money(computed.perDiem.mealsMonthly)}</td>
+                    {isFixed ? (
+                      <>
+                        <td>{computed.perDiem.mealsEmployees || "—"} employees</td>
+                        <td>{computed.perDiem.mealsWeeks || "—"}</td>
+                        <td>{money(computed.perDiem.mealsAmount)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td>{money(computed.perDiem.mealsDaily)}</td>
+                        <td>{money(computed.perDiem.mealsWeekly)}</td>
+                        <td>{money(computed.perDiem.mealsMonthly)}</td>
+                      </>
+                    )}
                   </tr>,
                 );
               }
@@ -205,12 +314,19 @@ export function EstimateDocument({ input, computed }: Props) {
                   <tr key={`${row.label}-${index}`}>
                     <td>A{itemNo}</td>
                     <td>
-                      {row.label.trim() || "Additional item"}
-                      {row.notes.trim() ? (
+                      {row.label}
+                      {row.notes ? (
                         <div className="muted">{row.notes}</div>
                       ) : null}
                     </td>
-                    <td colSpan={3}>As approved</td>
+                    {isFixed ? (
+                      <>
+                        <td colSpan={2}>As approved</td>
+                        <td>{row.amount ? money(row.amount) : "As approved"}</td>
+                      </>
+                    ) : (
+                      <td colSpan={3}>As approved</td>
+                    )}
                   </tr>,
                 );
               }
@@ -228,6 +344,51 @@ export function EstimateDocument({ input, computed }: Props) {
           </tbody>
         </table>
       </section>
+
+      {isFixed ? (
+        <section className="doc-block">
+          <h4>Estimate summary</h4>
+          <table>
+            <tbody>
+              <tr>
+                <th style={{ width: "55%" }}>Personnel</th>
+                <td>{money(totals.personnelTotal)}</td>
+              </tr>
+              <tr>
+                <th>Equipment</th>
+                <td>{money(totals.equipmentTotal)}</td>
+              </tr>
+              <tr>
+                <th>Lodging &amp; meals</th>
+                <td>{money(totals.lodgingMealsTotal)}</td>
+              </tr>
+              {totals.extrasTotal > 0 ? (
+                <tr>
+                  <th>Additional items</th>
+                  <td>{money(totals.extrasTotal)}</td>
+                </tr>
+              ) : null}
+              <tr>
+                <th>Subtotal</th>
+                <td>{money(totals.subtotal)}</td>
+              </tr>
+              <tr>
+                <th>
+                  Completion bonus / contingency (
+                  {(totals.contingencyPct * 100).toFixed(1)}%)
+                </th>
+                <td>{money(totals.contingencyAmount)}</td>
+              </tr>
+              <tr>
+                <th>Grand total (NTE)</th>
+                <td>
+                  <strong>{money(totals.grandTotal)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      ) : null}
 
       <section className="doc-block">
         <h4>Terms &amp; conditions not previously stated</h4>
@@ -248,8 +409,9 @@ export function EstimateDocument({ input, computed }: Props) {
         <h4>Authorization signatures</h4>
         <p className="signatures-intro">
           By signing below, each party acknowledges review of this estimate and
-          agrees to the rates, scope, and terms stated herein, subject to any
-          written amendments.
+          agrees to the{" "}
+          {isFixed ? "not-to-exceed price, scope, and terms" : "rates, scope, and terms"}{" "}
+          stated herein, subject to any written amendments.
         </p>
         <div className="signatures-grid">
           <div className="signature-col">

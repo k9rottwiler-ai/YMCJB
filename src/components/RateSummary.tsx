@@ -1,4 +1,4 @@
-import { money } from "../lib/calc";
+import { money, pct } from "../lib/calc";
 import type { ComputedEstimate, EstimateInput } from "../lib/types";
 
 type Props = {
@@ -7,6 +7,102 @@ type Props = {
 };
 
 export function RateSummary({ input, computed }: Props) {
+  const isFixed = input.templateType === "fixed";
+  const totals = computed.fixedTotals;
+
+  if (isFixed) {
+    return (
+      <div className="summary-grid panel-body">
+        <section className="summary-card">
+          <h4>Fixed Price summary</h4>
+          <table className="doc" style={{ border: "none" }}>
+            <tbody>
+              <tr>
+                <th>Personnel</th>
+                <td>{money(totals.personnelTotal)}</td>
+              </tr>
+              <tr>
+                <th>Equipment</th>
+                <td>{money(totals.equipmentTotal)}</td>
+              </tr>
+              <tr>
+                <th>Lodging &amp; meals</th>
+                <td>{money(totals.lodgingMealsTotal)}</td>
+              </tr>
+              <tr>
+                <th>Additional items</th>
+                <td>{money(totals.extrasTotal)}</td>
+              </tr>
+              <tr>
+                <th>Subtotal</th>
+                <td>{money(totals.subtotal)}</td>
+              </tr>
+              <tr>
+                <th>Contingency ({(totals.contingencyPct * 100).toFixed(1)}%)</th>
+                <td>{money(totals.contingencyAmount)}</td>
+              </tr>
+              <tr>
+                <th>Grand total (NTE)</th>
+                <td>
+                  <strong>{money(totals.grandTotal)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section className="summary-card">
+          <h4>Risk &amp; COL</h4>
+          <p style={{ margin: "0 0 0.35rem" }}>
+            <strong>Estimate risk factor:</strong> {totals.riskFactor.toFixed(2)}
+          </p>
+          <p style={{ margin: "0 0 0.35rem" }}>
+            <strong>COL adj:</strong> {pct(computed.colDelta)}
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>OT structure:</strong> {input.otStructure}
+          </p>
+        </section>
+
+        <section className="summary-card">
+          <h4>Personnel NTE lines</h4>
+          {computed.personnel.length === 0 ? (
+            <p className="empty">Add personnel with weeks to see amounts.</p>
+          ) : (
+            <table className="doc" style={{ border: "none" }}>
+              <thead>
+                <tr>
+                  <th>Role</th>
+                  <th>Adj. hours</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {computed.personnel.map((row) => (
+                  <tr key={row.item}>
+                    <td>{row.role || row.name || row.item}</td>
+                    <td>{row.adjustedHours.toFixed(1)}</td>
+                    <td>{money(row.estimateAmount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        <section className="summary-card">
+          <h4>Project</h4>
+          <p style={{ margin: "0 0 0.35rem" }}>
+            <strong>Location:</strong> {input.projectState || "—"}
+          </p>
+          <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+            <strong>Scope:</strong> {input.projectScope || "—"}
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="summary-grid panel-body">
       <section className="summary-card">

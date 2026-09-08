@@ -3,6 +3,7 @@ import type {
   EstimateInput,
   ExtraItem,
   PersonnelSlot,
+  TemplateType,
 } from "../lib/types";
 import {
   EQUIPMENT_CATALOG,
@@ -14,6 +15,7 @@ import {
   emptyExtraItem,
   emptyPersonnelSlot,
   salaryOptions,
+  switchTemplateType,
 } from "../lib/calc";
 
 type Props = {
@@ -66,12 +68,46 @@ function updateExtraItem(
   onChange({ ...value, extraItems });
 }
 
+function parseOptionalNumber(raw: string): number | "" {
+  if (raw === "") return "";
+  return Math.max(0, Number(raw) || 0);
+}
+
 export function EstimateForm({ value, onChange }: Props) {
   const salaries = salaryOptions();
   const catalogNames = new Set(EQUIPMENT_CATALOG.map((eq) => eq.name));
+  const isFixed = value.templateType === "fixed";
 
   return (
     <div className="panel-body">
+      <section className="section">
+        <h3>Template</h3>
+        <div className="template-switch" role="group" aria-label="Estimate template">
+          {(
+            [
+              ["te", "Time & Equipment"],
+              ["fixed", "Fixed Price"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={`template-btn ${value.templateType === id ? "active" : ""}`}
+              onClick={() =>
+                onChange(switchTemplateType(value, id as TemplateType))
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="hint">
+          {isFixed
+            ? "Fixed Price builds a not-to-exceed total from weeks, estimate risk, and contingency — matching the Fixed Price Excel workbook."
+            : "Time & Equipment publishes unit rates for labor, equipment, and per diem without a locked grand total."}
+        </p>
+      </section>
+
       <section className="section">
         <h3>Estimator</h3>
         <div className="grid grid-3">
@@ -228,7 +264,56 @@ export function EstimateForm({ value, onChange }: Props) {
               ))}
             </select>
           </div>
+          {isFixed ? (
+            <>
+              <div className="field">
+                <label htmlFor="estimateRiskPct">Estimate risk (%)</label>
+                <input
+                  id="estimateRiskPct"
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={value.estimateRiskPct}
+                  onChange={(e) =>
+                    updateField(
+                      value,
+                      onChange,
+                      "estimateRiskPct",
+                      parseOptionalNumber(e.target.value),
+                    )
+                  }
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="contingencyPct">
+                  Completion bonus / contingency (%)
+                </label>
+                <input
+                  id="contingencyPct"
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={value.contingencyPct}
+                  onChange={(e) =>
+                    updateField(
+                      value,
+                      onChange,
+                      "contingencyPct",
+                      parseOptionalNumber(e.target.value),
+                    )
+                  }
+                />
+              </div>
+            </>
+          ) : null}
         </div>
+        {isFixed ? (
+          <p className="hint">
+            Risk inflates hours/weeks (× 1 + risk%). Contingency is applied to
+            the estimate subtotal. Prefer a blended OT contingency structure for
+            Fixed Price NTE labor rates.
+          </p>
+        ) : null}
       </section>
 
       <section className="section">
@@ -343,8 +428,9 @@ export function EstimateForm({ value, onChange }: Props) {
           <div>
             <h3>Personnel</h3>
             <p className="hint">
-              Add manpower lines as needed. Salary selects from the wage
-              schedule; COL adjusts to the nearest $5,000 band.
+              {isFixed
+                ? "Add manpower lines with estimated weeks. Hours = weeks × 40, then risk-adjusted for the NTE amount."
+                : "Add manpower lines as needed. Salary selects from the wage schedule; COL adjusts to the nearest $5,000 band."}
             </p>
           </div>
           <button
@@ -362,7 +448,10 @@ export function EstimateForm({ value, onChange }: Props) {
         </div>
         <div className="grid">
           {value.personnel.map((slot, index) => (
-            <div className="person-row" key={index}>
+            <div
+              className={`person-row ${isFixed ? "person-row-fixed" : ""}`}
+              key={index}
+            >
               <div className="field">
                 <label htmlFor={`role-${index}`}>Role (M{index + 1})</label>
                 <input
@@ -409,6 +498,23 @@ export function EstimateForm({ value, onChange }: Props) {
                   ))}
                 </select>
               </div>
+              {isFixed ? (
+                <div className="field">
+                  <label htmlFor={`weeks-${index}`}>Estimated weeks</label>
+                  <input
+                    id={`weeks-${index}`}
+                    type="number"
+                    min={0}
+                    step={0.25}
+                    value={slot.estimatedWeeks}
+                    onChange={(e) =>
+                      updatePersonnel(value, onChange, index, {
+                        estimatedWeeks: parseOptionalNumber(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
               <div className="row-actions">
                 <button
                   type="button"
@@ -434,8 +540,9 @@ export function EstimateForm({ value, onChange }: Props) {
           <div>
             <h3>Equipment</h3>
             <p className="hint">
-              Add catalog or custom equipment lines. Custom rows need an hourly
-              rate; catalog rates are COL-adjusted automatically.
+              {isFixed
+                ? "Add equipment with quantity and estimated weeks. NTE uses COL-adjusted weekly rate × qty × risk-adjusted weeks."
+                : "Add catalog or custom equipment lines. Custom rows need an hourly rate; catalog rates are COL-adjusted automatically."}
             </p>
           </div>
           <div className="section-actions">
@@ -465,7 +572,7 @@ export function EstimateForm({ value, onChange }: Props) {
                   ...value,
                   equipmentRows: [
                     ...value.equipmentRows,
-                    { name: "", count: 1, customHourly: 0 },
+                    { name: "", count: 1, customHourly: 0, estimatedWeeks: "" },
                   ],
                 })
               }
@@ -484,7 +591,10 @@ export function EstimateForm({ value, onChange }: Props) {
               (slot.name !== "" && !catalogNames.has(slot.name));
             const catalog = EQUIPMENT_CATALOG.find((eq) => eq.name === slot.name);
             return (
-              <div className="equip-row" key={index}>
+              <div
+                className={`equip-row ${isFixed ? "equip-row-fixed" : ""}`}
+                key={index}
+              >
                 {isCustom ? (
                   <>
                     <div className="field">
@@ -566,6 +676,23 @@ export function EstimateForm({ value, onChange }: Props) {
                     }
                   />
                 </div>
+                {isFixed ? (
+                  <div className="field">
+                    <label htmlFor={`eq-weeks-${index}`}>Estimated weeks</label>
+                    <input
+                      id={`eq-weeks-${index}`}
+                      type="number"
+                      min={0}
+                      step={0.25}
+                      value={slot.estimatedWeeks}
+                      onChange={(e) =>
+                        updateEquipment(value, onChange, index, {
+                          estimatedWeeks: parseOptionalNumber(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                ) : null}
                 <div className="row-actions">
                   <button
                     type="button"
@@ -593,7 +720,9 @@ export function EstimateForm({ value, onChange }: Props) {
           <div>
             <h3>Additional items</h3>
             <p className="hint">
-              Toggle lodging/meals, then add any other reimbursable lines.
+              {isFixed
+                ? "Set lodging rooms/weeks and meals employees/weeks for per-diem totals. Optional dollar amounts on extra lines roll into the NTE."
+                : "Toggle lodging/meals, then add any other reimbursable lines."}
             </p>
           </div>
           <button
@@ -631,12 +760,97 @@ export function EstimateForm({ value, onChange }: Props) {
             Include meals &amp; incidentals
           </label>
         </div>
-        <div className="grid">
+        {isFixed && (value.includeLodging || value.includeMeals) ? (
+          <div className="grid grid-2" style={{ marginTop: "0.75rem" }}>
+            {value.includeLodging ? (
+              <>
+                <div className="field">
+                  <label htmlFor="lodgingRooms">Lodging rooms</label>
+                  <input
+                    id="lodgingRooms"
+                    type="number"
+                    min={0}
+                    value={value.lodgingRooms}
+                    onChange={(e) =>
+                      updateField(
+                        value,
+                        onChange,
+                        "lodgingRooms",
+                        parseOptionalNumber(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="lodgingWeeks">Lodging weeks</label>
+                  <input
+                    id="lodgingWeeks"
+                    type="number"
+                    min={0}
+                    step={0.25}
+                    value={value.lodgingWeeks}
+                    onChange={(e) =>
+                      updateField(
+                        value,
+                        onChange,
+                        "lodgingWeeks",
+                        parseOptionalNumber(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+              </>
+            ) : null}
+            {value.includeMeals ? (
+              <>
+                <div className="field">
+                  <label htmlFor="mealsEmployees">Meals employees</label>
+                  <input
+                    id="mealsEmployees"
+                    type="number"
+                    min={0}
+                    value={value.mealsEmployees}
+                    onChange={(e) =>
+                      updateField(
+                        value,
+                        onChange,
+                        "mealsEmployees",
+                        parseOptionalNumber(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="mealsWeeks">Meals weeks</label>
+                  <input
+                    id="mealsWeeks"
+                    type="number"
+                    min={0}
+                    step={0.25}
+                    value={value.mealsWeeks}
+                    onChange={(e) =>
+                      updateField(
+                        value,
+                        onChange,
+                        "mealsWeeks",
+                        parseOptionalNumber(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="grid" style={{ marginTop: "0.75rem" }}>
           {value.extraItems.length === 0 ? (
             <p className="hint">No extra approval items added yet.</p>
           ) : null}
           {value.extraItems.map((item, index) => (
-            <div className="extra-row" key={index}>
+            <div
+              className={`extra-row ${isFixed ? "extra-row-fixed" : ""}`}
+              key={index}
+            >
               <div className="field">
                 <label htmlFor={`extra-label-${index}`}>Item label</label>
                 <input
@@ -669,6 +883,23 @@ export function EstimateForm({ value, onChange }: Props) {
                   }
                 />
               </div>
+              {isFixed ? (
+                <div className="field">
+                  <label htmlFor={`extra-amount-${index}`}>Amount ($)</label>
+                  <input
+                    id={`extra-amount-${index}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={item.amount}
+                    onChange={(e) =>
+                      updateExtraItem(value, onChange, index, {
+                        amount: parseOptionalNumber(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
               <div className="row-actions">
                 <button
                   type="button"
@@ -706,21 +937,39 @@ export function EstimateForm({ value, onChange }: Props) {
             />
             Include stand-by time term
           </label>
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={value.includeHolidayTerm}
-              onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "includeHolidayTerm",
-                  e.target.checked,
-                )
-              }
-            />
-            Include federal holiday OT term
-          </label>
+          {!isFixed ? (
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={value.includeHolidayTerm}
+                onChange={(e) =>
+                  updateField(
+                    value,
+                    onChange,
+                    "includeHolidayTerm",
+                    e.target.checked,
+                  )
+                }
+              />
+              Include federal holiday OT term
+            </label>
+          ) : (
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={value.includeChangeOrderTerm}
+                onChange={(e) =>
+                  updateField(
+                    value,
+                    onChange,
+                    "includeChangeOrderTerm",
+                    e.target.checked,
+                  )
+                }
+              />
+              Include change-order / out-of-scope T&amp;E billing term
+            </label>
+          )}
         </div>
         <div className="grid">
           {value.additionalTerms.map((term, index) => (
