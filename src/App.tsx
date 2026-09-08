@@ -5,6 +5,7 @@ import { RateSummary } from "./components/RateSummary";
 import {
   computeEstimate,
   createDefaultEstimate,
+  normalizeEstimate,
   pct,
 } from "./lib/calc";
 import type { EstimateInput } from "./lib/types";
@@ -17,7 +18,7 @@ function loadInitial(): EstimateInput {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return createDefaultEstimate();
-    return { ...createDefaultEstimate(), ...JSON.parse(raw) };
+    return normalizeEstimate(JSON.parse(raw));
   } catch {
     return createDefaultEstimate();
   }
@@ -49,18 +50,18 @@ function loadDemo(): EstimateInput {
       { role: "Superintendent", name: "Jordan Lee", salary: 120000 },
       { role: "Foreman", name: "Casey Nguyen", salary: 95000 },
       { role: "Equipment Operator", name: "Riley Brooks", salary: 80000 },
-      { role: "", name: "", salary: "" },
-      { role: "", name: "", salary: "" },
-      { role: "", name: "", salary: "" },
-      { role: "", name: "", salary: "" },
     ],
-    equipmentCounts: {
-      ...base.equipmentCounts,
-      "3/4 Ton 4wd Truck": 2,
-      "10K Mini Ex w/Trailer": 1,
-      "Skidsteer w/Trailer": 1,
-    },
-    rentalVehicle: "As needed for crew transport",
+    equipmentRows: [
+      { name: "3/4 Ton 4wd Truck", count: 2, customHourly: "" },
+      { name: "10K Mini Ex w/Trailer", count: 1, customHourly: "" },
+      { name: "Skidsteer w/Trailer", count: 1, customHourly: "" },
+    ],
+    extraItems: [
+      {
+        label: "Rental Vehicle (Client Prior Approval Required)",
+        notes: "As needed for crew transport",
+      },
+    ],
     additionalTerms: [
       "Mobilization and demobilization billed at straight-time rates unless otherwise agreed in writing.",
       "",

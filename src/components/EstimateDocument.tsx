@@ -18,28 +18,9 @@ function formatDate(value: string): string {
 }
 
 export function EstimateDocument({ input, computed }: Props) {
-  const extras = [
-    {
-      label: "Rental Vehicle (Client Prior Approval Required)",
-      value: input.rentalVehicle,
-    },
-    {
-      label: "Air Fare (Client Prior Approval Required)",
-      value: input.airFare,
-    },
-    {
-      label: "Rental Equipment (Client Prior Approval Required)",
-      value: input.rentalEquipment,
-    },
-    {
-      label: "Support Purchases (Client Prior Approval Required)",
-      value: input.supportPurchases,
-    },
-    {
-      label: "Background/Drug Screenings, Memberships (Client Prior Approval Required)",
-      value: input.backgroundScreenings,
-    },
-  ].filter((row) => row.value.trim());
+  const extras = input.extraItems.filter(
+    (row) => row.label.trim() || row.notes.trim(),
+  );
 
   return (
     <article className="doc" id="estimate-document">
@@ -191,43 +172,59 @@ export function EstimateDocument({ input, computed }: Props) {
             </tr>
           </thead>
           <tbody>
-            {input.includeLodging ? (
-              <tr>
-                <td>A1</td>
-                <td>Lodging</td>
-                <td>{money(computed.perDiem.lodgingDaily)}</td>
-                <td>{money(computed.perDiem.lodgingWeekly)}</td>
-                <td>{money(computed.perDiem.lodgingMonthly)}</td>
-              </tr>
-            ) : null}
-            {input.includeMeals ? (
-              <tr>
-                <td>A2</td>
-                <td>Meals and Incidentals</td>
-                <td>{money(computed.perDiem.mealsDaily)}</td>
-                <td>{money(computed.perDiem.mealsWeekly)}</td>
-                <td>{money(computed.perDiem.mealsMonthly)}</td>
-              </tr>
-            ) : null}
-            {extras.map((row, index) => (
-              <tr key={row.label}>
-                <td>A{index + 3}</td>
-                <td>
-                  {row.label}
-                  <div className="muted">{row.value}</div>
-                </td>
-                <td colSpan={3}>As approved</td>
-              </tr>
-            ))}
-            {!input.includeLodging &&
-            !input.includeMeals &&
-            extras.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="muted">
-                  No additional items.
-                </td>
-              </tr>
-            ) : null}
+            {(() => {
+              let itemNo = 0;
+              const rows = [];
+              if (input.includeLodging) {
+                itemNo += 1;
+                rows.push(
+                  <tr key="lodging">
+                    <td>A{itemNo}</td>
+                    <td>Lodging</td>
+                    <td>{money(computed.perDiem.lodgingDaily)}</td>
+                    <td>{money(computed.perDiem.lodgingWeekly)}</td>
+                    <td>{money(computed.perDiem.lodgingMonthly)}</td>
+                  </tr>,
+                );
+              }
+              if (input.includeMeals) {
+                itemNo += 1;
+                rows.push(
+                  <tr key="meals">
+                    <td>A{itemNo}</td>
+                    <td>Meals and Incidentals</td>
+                    <td>{money(computed.perDiem.mealsDaily)}</td>
+                    <td>{money(computed.perDiem.mealsWeekly)}</td>
+                    <td>{money(computed.perDiem.mealsMonthly)}</td>
+                  </tr>,
+                );
+              }
+              for (const [index, row] of extras.entries()) {
+                itemNo += 1;
+                rows.push(
+                  <tr key={`${row.label}-${index}`}>
+                    <td>A{itemNo}</td>
+                    <td>
+                      {row.label.trim() || "Additional item"}
+                      {row.notes.trim() ? (
+                        <div className="muted">{row.notes}</div>
+                      ) : null}
+                    </td>
+                    <td colSpan={3}>As approved</td>
+                  </tr>,
+                );
+              }
+              if (rows.length === 0) {
+                rows.push(
+                  <tr key="empty">
+                    <td colSpan={5} className="muted">
+                      No additional items.
+                    </td>
+                  </tr>,
+                );
+              }
+              return rows;
+            })()}
           </tbody>
         </table>
       </section>

@@ -17,6 +17,19 @@ export interface PersonnelSlot {
   salary: number | "";
 }
 
+export interface EquipmentSlot {
+  /** Catalog equipment name, or a custom label when `customHourly` is set. */
+  name: string;
+  count: number;
+  /** When set, treats the row as custom equipment (not from the catalog). */
+  customHourly: number | "";
+}
+
+export interface ExtraItem {
+  label: string;
+  notes: string;
+}
+
 export interface EstimateInput {
   id: string;
   estimatorName: string;
@@ -39,14 +52,10 @@ export interface EstimateInput {
   stProfit: ProfitTier;
   otProfit: ProfitTier;
   personnel: PersonnelSlot[];
-  equipmentCounts: Record<string, number>;
+  equipmentRows: EquipmentSlot[];
   includeLodging: boolean;
   includeMeals: boolean;
-  rentalVehicle: string;
-  airFare: string;
-  rentalEquipment: string;
-  supportPurchases: string;
-  backgroundScreenings: string;
+  extraItems: ExtraItem[];
   includeStandByTerm: boolean;
   includeHolidayTerm: boolean;
   additionalTerms: string[];

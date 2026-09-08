@@ -5,9 +5,9 @@ Time & Equipment job estimate webapp (recreated from `BidSheet_TE_Template.xlsx`
 ## Features
 
 - Estimate intake form (estimator, customer, scope, schedule, OT structure, profit tiers)
-- Up to 7 personnel with wage-schedule salary bands and COL adjustment
-- Equipment quantities with COL-adjusted hourly / daily / weekly rates
-- GSA-based lodging & meals per diem by project state
+- Add/remove personnel lines with wage-schedule salary bands and COL adjustment
+- Add catalog or custom equipment lines with COL-adjusted hourly / daily / weekly rates
+- Add unlimited additional approval items plus GSA lodging & meals per diem by project state
 - Live printable estimate document + rate summary
 - Local browser persistence, demo data, JSON export
 
