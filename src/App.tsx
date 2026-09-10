@@ -40,6 +40,7 @@ function loadDemo(templateType: TemplateType = "te"): EstimateInput {
     estimatorPhone: "(555) 201-4488",
     estimatorEmail: "alex.rivera@example.com",
     customerName: "Summit Pipeline Partners",
+    customerContactName: "Morgan Ellis",
     projectAddress: "1840 County Rd 12, Midland, TX 79701",
     clientPhone: "(432) 555-0199",
     clientEmail: "procurement@summitpipe.example",
