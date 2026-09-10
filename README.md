@@ -28,7 +28,7 @@ Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** te
 
 ### In-app unlock (all hosts)
 
-Default production password: **`ymcjb`** (from `.env.production` → `VITE_APP_PASSWORD`).
+Production password is set in `.env.production` as `VITE_APP_PASSWORD` (not published here — ask an admin or check Railway variables / your secure notes).
 
 - Change it by setting `VITE_APP_PASSWORD` in Railway **Variables** (build-time) or editing `.env.production`, then redeploy/rebuild.
 - Leave `VITE_APP_PASSWORD` empty to disable the login screen.
