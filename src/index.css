@@ -715,3 +715,45 @@ a {
   flex-wrap: wrap;
   gap: 0.4rem;
 }
+
+/* —— Auth gate —— */
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 45%),
+    radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--brand) 18%, transparent), transparent 40%),
+    linear-gradient(160deg, #f3fafb, #e7f1f3 55%, #dfecee);
+}
+
+.auth-card {
+  width: min(100%, 26rem);
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.4rem 1.35rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand .brand-title {
+  font-size: 2.2rem;
+}
+
+.auth-brand .brand-sub {
+  margin-top: 0.35rem;
+}
+
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-error {
+  color: #8a1f11;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
