@@ -6,17 +6,14 @@ import type {
   TemplateType,
 } from "../lib/types";
 import {
-  EQUIPMENT_CATALOG,
   EXTRA_ITEM_PRESETS,
-  OT_STRUCTURES,
-  PROFIT_TIERS,
-  STATES,
   emptyEquipmentSlot,
   emptyExtraItem,
   emptyPersonnelSlot,
   salaryOptions,
   switchTemplateType,
 } from "../lib/calc";
+import { useReference } from "../lib/reference";
 
 type Props = {
   value: EstimateInput;
@@ -74,9 +71,14 @@ function parseOptionalNumber(raw: string): number | "" {
 }
 
 export function EstimateForm({ value, onChange }: Props) {
+  const reference = useReference();
   const salaries = salaryOptions();
-  const catalogNames = new Set(EQUIPMENT_CATALOG.map((eq) => eq.name));
+  const catalogNames = new Set(reference.equipment.map((eq) => eq.name));
   const isFixed = value.templateType === "fixed";
+  const STATES = reference.states;
+  const EQUIPMENT_CATALOG = reference.equipment;
+  const OT_STRUCTURES = reference.otStructures;
+  const PROFIT_TIERS = reference.profitTiers;
 
   return (
     <div className="panel-body">

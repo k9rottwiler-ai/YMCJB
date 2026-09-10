@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AdminPage } from "./components/AdminPage";
 import { EstimateDocument } from "./components/EstimateDocument";
 import { EstimateForm } from "./components/EstimateForm";
 import { RateSummary } from "./components/RateSummary";
@@ -10,11 +11,13 @@ import {
   pct,
   switchTemplateType,
 } from "./lib/calc";
+import { useReference } from "./lib/reference";
 import type { EstimateInput, TemplateType } from "./lib/types";
 
 const STORAGE_KEY = "bidsheet-te-estimate-v2";
 
 type PreviewTab = "document" | "summary";
+type AppView = "estimate" | "admin";
 
 function loadInitial(): EstimateInput {
   try {
@@ -172,9 +175,14 @@ function loadDemo(templateType: TemplateType = "te"): EstimateInput {
 }
 
 export default function App() {
+  const [view, setView] = useState<AppView>("estimate");
   const [estimate, setEstimate] = useState<EstimateInput>(loadInitial);
   const [tab, setTab] = useState<PreviewTab>("document");
-  const computed = useMemo(() => computeEstimate(estimate), [estimate]);
+  const reference = useReference();
+  const computed = useMemo(
+    () => computeEstimate(estimate),
+    [estimate, reference],
+  );
   const isFixed = estimate.templateType === "fixed";
 
   useEffect(() => {
@@ -198,110 +206,141 @@ export default function App() {
       <header className="app-header no-print">
         <div className="brand-block">
           <div className="brand-kicker">
-            {isFixed ? "Fixed Price · Not to Exceed" : "Time & Equipment"}
+            {view === "admin"
+              ? "Rates · Per Diem · COL"
+              : isFixed
+                ? "Fixed Price · Not to Exceed"
+                : "Time & Equipment"}
           </div>
           <h1 className="brand-title">BidSheet</h1>
           <p className="brand-sub">
-            {isFixed
-              ? "Build a not-to-exceed job estimate from weeks, wage-schedule rates, COL, per diem, estimate risk, and contingency — then print the client sheet."
-              : "Build job estimates with wage-schedule pricing, cost-of-living adjustments, equipment rates, and GSA-based per diem — then print the client-facing sheet."}
+            {view === "admin"
+              ? "Maintain wage schedule rates, equipment catalog rates, GSA per diem, and cost-of-living indexes. Download CSV/JSON templates or edit inline."
+              : isFixed
+                ? "Build a not-to-exceed job estimate from weeks, wage-schedule rates, COL, per diem, estimate risk, and contingency — then print the client sheet."
+                : "Build job estimates with wage-schedule pricing, cost-of-living adjustments, equipment rates, and GSA-based per diem — then print the client-facing sheet."}
           </p>
         </div>
         <div className="header-actions">
-          <span className="meta-chip">
-            COL adj {pct(computed.colDelta)}
-          </span>
-          {isFixed ? (
-            <span className="meta-chip meta-chip-accent">
-              NTE {money(computed.fixedTotals.grandTotal)}
-            </span>
-          ) : null}
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setEstimate(loadDemo(estimate.templateType))}
-          >
-            Load demo
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() =>
-              setEstimate(createDefaultEstimate(estimate.templateType))
-            }
-          >
-            New estimate
-          </button>
-          <button type="button" className="btn" onClick={downloadJson}>
-            Export JSON
-          </button>
-          <button
-            type="button"
-            className="btn btn-accent"
-            onClick={() => window.print()}
-          >
-            Print estimate
-          </button>
+          {view === "estimate" ? (
+            <>
+              <span className="meta-chip">
+                COL adj {pct(computed.colDelta)}
+              </span>
+              {isFixed ? (
+                <span className="meta-chip meta-chip-accent">
+                  NTE {money(computed.fixedTotals.grandTotal)}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setView("admin")}
+              >
+                Administration
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setEstimate(loadDemo(estimate.templateType))}
+              >
+                Load demo
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() =>
+                  setEstimate(createDefaultEstimate(estimate.templateType))
+                }
+              >
+                New estimate
+              </button>
+              <button type="button" className="btn" onClick={downloadJson}>
+                Export JSON
+              </button>
+              <button
+                type="button"
+                className="btn btn-accent"
+                onClick={() => window.print()}
+              >
+                Print estimate
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-accent"
+              onClick={() => setView("estimate")}
+            >
+              Back to estimates
+            </button>
+          )}
         </div>
       </header>
 
-      <div className="layout">
-        <section className="panel form-panel no-print">
-          <div className="panel-head">
-            <h2>Estimate inputs</h2>
-            <div className="tabs template-tabs">
-              <button
-                type="button"
-                className={`tab ${estimate.templateType === "te" ? "active" : ""}`}
-                onClick={() =>
-                  setEstimate((prev) => switchTemplateType(prev, "te"))
-                }
-              >
-                T&amp;E
-              </button>
-              <button
-                type="button"
-                className={`tab ${estimate.templateType === "fixed" ? "active" : ""}`}
-                onClick={() =>
-                  setEstimate((prev) => switchTemplateType(prev, "fixed"))
-                }
-              >
-                Fixed Price
-              </button>
-            </div>
-          </div>
-          <EstimateForm value={estimate} onChange={setEstimate} />
+      {view === "admin" ? (
+        <section className="panel admin-panel no-print">
+          <AdminPage onBack={() => setView("estimate")} />
         </section>
+      ) : (
+        <div className="layout">
+          <section className="panel form-panel no-print">
+            <div className="panel-head">
+              <h2>Estimate inputs</h2>
+              <div className="tabs template-tabs">
+                <button
+                  type="button"
+                  className={`tab ${estimate.templateType === "te" ? "active" : ""}`}
+                  onClick={() =>
+                    setEstimate((prev) => switchTemplateType(prev, "te"))
+                  }
+                >
+                  T&amp;E
+                </button>
+                <button
+                  type="button"
+                  className={`tab ${estimate.templateType === "fixed" ? "active" : ""}`}
+                  onClick={() =>
+                    setEstimate((prev) => switchTemplateType(prev, "fixed"))
+                  }
+                >
+                  Fixed Price
+                </button>
+              </div>
+            </div>
+            <EstimateForm value={estimate} onChange={setEstimate} />
+          </section>
 
-        <section className="panel">
-          <div className="panel-head no-print">
-            <h2>Live output</h2>
-            <div className="tabs">
-              <button
-                type="button"
-                className={`tab ${tab === "document" ? "active" : ""}`}
-                onClick={() => setTab("document")}
-              >
-                Estimate
-              </button>
-              <button
-                type="button"
-                className={`tab ${tab === "summary" ? "active" : ""}`}
-                onClick={() => setTab("summary")}
-              >
-                {isFixed ? "Price summary" : "Rate summary"}
-              </button>
+          <section className="panel">
+            <div className="panel-head no-print">
+              <h2>Live output</h2>
+              <div className="tabs">
+                <button
+                  type="button"
+                  className={`tab ${tab === "document" ? "active" : ""}`}
+                  onClick={() => setTab("document")}
+                >
+                  Estimate
+                </button>
+                <button
+                  type="button"
+                  className={`tab ${tab === "summary" ? "active" : ""}`}
+                  onClick={() => setTab("summary")}
+                >
+                  {isFixed ? "Price summary" : "Rate summary"}
+                </button>
+              </div>
             </div>
-          </div>
-          {tab === "document" ? (
-            <div className="panel-body">
-              <EstimateDocument input={estimate} computed={computed} />
-            </div>
-          ) : (
-            <RateSummary input={estimate} computed={computed} />
-          )}
-        </section>
-      </div>
+            {tab === "document" ? (
+              <div className="panel-body">
+                <EstimateDocument input={estimate} computed={computed} />
+              </div>
+            ) : (
+              <RateSummary input={estimate} computed={computed} />
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }
