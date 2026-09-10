@@ -37,6 +37,28 @@ npm run build
 npm run preview
 ```
 
+## Deploy on Railway
+
+This is a Vite SPA. Railway needs a static server after `npm run build` — the repo includes `Caddyfile` + `nixpacks.toml` for that.
+
+1. Push this branch to GitHub (already done if you’re on the agent branch).
+2. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**.
+3. Select `k9rottwiler-ai/YMCJB` and the branch you want (e.g. `cursor/admin-rates-perdiem-col-7857` or `main` after merge).
+4. Leave build/start empty — Nixpacks will run `npm run build` and start Caddy from `nixpacks.toml`.
+5. Open the service → **Settings** → **Networking** → **Generate Domain**.
+
+Optional CLI:
+
+```bash
+npm i -g @railway/cli
+railway login
+railway init
+railway up
+railway domain
+```
+
+Do **not** set the start command to `npm run dev` or `vite` — that runs the development server, not production.
+
 ## Administration & templates
 
 Open **Administration** in the app header to:
