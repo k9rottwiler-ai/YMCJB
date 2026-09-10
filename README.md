@@ -17,16 +17,11 @@ Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** te
 
 ## Web app
 
-**Live preview (current build):** https://pendant-fonts-finals-minds.trycloudflare.com
+**Stable app URL:** https://k9rottwiler-ai.github.io/YMCJB/
 
-> This Cloudflare tunnel stays up while the cloud agent/session is running.
+GitHub Pages is enabled from the `gh-pages` branch (includes Administration, T&E, and Fixed Price).
 
-**Stable GitHub Pages URL (after enabling Pages):** https://k9rottwiler-ai.github.io/YMCJB/
-
-A `gh-pages` branch with the production build is already published. To activate it:
-1. Open https://github.com/k9rottwiler-ai/YMCJB/settings/pages
-2. Set Source to **Deploy from a branch**
-3. Choose branch **`gh-pages`** / root (`/`) → Save
+> Ephemeral Cloudflare preview tunnels expire when the agent session ends — use the Pages URL above.
 
 ## Run locally
 
