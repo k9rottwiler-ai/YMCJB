@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminPage } from "./components/AdminPage";
+import { AuthGate, LockButton } from "./components/AuthGate";
 import { EstimateDocument } from "./components/EstimateDocument";
 import { EstimateForm } from "./components/EstimateForm";
 import { RateSummary } from "./components/RateSummary";
@@ -202,6 +203,7 @@ export default function App() {
   }
 
   return (
+    <AuthGate>
     <div className="app-shell">
       <header className="app-header no-print">
         <div className="brand-block">
@@ -258,6 +260,7 @@ export default function App() {
               <button type="button" className="btn" onClick={downloadJson}>
                 Export JSON
               </button>
+              <LockButton />
               <button
                 type="button"
                 className="btn btn-accent"
@@ -267,13 +270,16 @@ export default function App() {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              className="btn btn-accent"
-              onClick={() => setView("estimate")}
-            >
-              Back to estimates
-            </button>
+            <>
+              <LockButton />
+              <button
+                type="button"
+                className="btn btn-accent"
+                onClick={() => setView("estimate")}
+              >
+                Back to estimates
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -342,5 +348,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </AuthGate>
   );
 }

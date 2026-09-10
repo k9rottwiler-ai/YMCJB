@@ -12,6 +12,7 @@ Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** te
 - Add unlimited additional approval items plus GSA lodging & meals per diem by project state
 - **Administration** page to update wage rates, equipment rates, per diem, and COL indexes
 - CSV / JSON download templates + import; browser overrides with export for `reference.json`
+- Password protection (in-app unlock + optional Railway HTTP basic auth)
 - Live printable estimate document + rate / price summary
 - Local browser persistence, demo data, JSON export
 
@@ -22,6 +23,27 @@ Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** te
 **GitHub Pages:** https://k9rottwiler-ai.github.io/YMCJB/
 
 > Prefer Railway for the primary shareable URL. Redeploy from the latest branch if Administration is missing (older builds only have T&E + Fixed Price).
+
+## Password protection
+
+### In-app unlock (all hosts)
+
+Production password is set in `.env.production` as `VITE_APP_PASSWORD` (not published here — ask an admin or check Railway variables / your secure notes).
+
+- Change it by setting `VITE_APP_PASSWORD` in Railway **Variables** (build-time) or editing `.env.production`, then redeploy/rebuild.
+- Leave `VITE_APP_PASSWORD` empty to disable the login screen.
+- Session unlock lasts for the browser tab (`sessionStorage`). Use **Lock** in the header to require the password again.
+
+### Railway HTTP basic auth (optional, stronger)
+
+Set these Railway service variables (runtime — no rebuild required for password changes):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `APP_USERNAME` | `admin` | Basic-auth username |
+| `APP_PASSWORD` | _(unset)_ | Basic-auth password (enables Caddy `basic_auth` when set) |
+
+When `APP_PASSWORD` is set, the browser shows a native login prompt before the app loads. You can use this alone, or together with the in-app gate.
 
 ## Run locally
 
