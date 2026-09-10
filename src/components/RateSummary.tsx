@@ -8,7 +8,9 @@ type Props = {
 
 export function RateSummary({ input, computed }: Props) {
   const isFixed = input.templateType === "fixed";
+  const isUnit = input.templateType === "unit";
   const totals = computed.fixedTotals;
+  const unitTotals = computed.unitTotals;
 
   if (isFixed) {
     return (
@@ -88,6 +90,93 @@ export function RateSummary({ input, computed }: Props) {
               </tbody>
             </table>
           )}
+        </section>
+
+        <section className="summary-card">
+          <h4>Project</h4>
+          <p style={{ margin: "0 0 0.35rem" }}>
+            <strong>Location:</strong> {input.projectState || "—"}
+          </p>
+          <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+            <strong>Scope:</strong> {input.projectScope || "—"}
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  if (isUnit) {
+    return (
+      <div className="summary-grid panel-body">
+        <section className="summary-card">
+          <h4>Unit rates</h4>
+          {unitTotals.units.length === 0 ? (
+            <p className="empty">Add unit activities to see priced rates.</p>
+          ) : (
+            <table className="doc" style={{ border: "none" }}>
+              <thead>
+                <tr>
+                  <th>Unit ID</th>
+                  <th>Description</th>
+                  <th>UOM</th>
+                  <th>Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unitTotals.units.map((row) => (
+                  <tr key={row.item}>
+                    <td>{row.unitId || row.item}</td>
+                    <td>{row.description || row.activity || "—"}</td>
+                    <td>{row.uom || "—"}</td>
+                    <td>{money(row.unitPrice)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        <section className="summary-card">
+          <h4>Blend factors</h4>
+          <p style={{ margin: "0 0 0.35rem" }}>
+            <strong>Productivity:</strong>{" "}
+            {(unitTotals.productivityFactor * 100).toFixed(0)}%
+          </p>
+          <p style={{ margin: "0 0 0.35rem" }}>
+            <strong>Labor $/min:</strong> {money(unitTotals.laborPerMin, 4)}
+          </p>
+          <p style={{ margin: "0 0 0.35rem" }}>
+            <strong>Equipment $/min:</strong>{" "}
+            {money(unitTotals.equipmentPerMin, 4)}
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>COL adj:</strong> {pct(computed.colDelta)}
+          </p>
+        </section>
+
+        <section className="summary-card">
+          <h4>Lodging &amp; meals</h4>
+          <table className="doc" style={{ border: "none" }}>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Daily</th>
+                <th>Weekly</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Lodging</td>
+                <td>{money(computed.perDiem.lodgingDaily)}</td>
+                <td>{money(computed.perDiem.lodgingWeekly)}</td>
+              </tr>
+              <tr>
+                <td>Meals and Incidentals</td>
+                <td>{money(computed.perDiem.mealsDaily)}</td>
+                <td>{money(computed.perDiem.mealsWeekly)}</td>
+              </tr>
+            </tbody>
+          </table>
         </section>
 
         <section className="summary-card">

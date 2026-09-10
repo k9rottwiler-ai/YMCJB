@@ -355,6 +355,10 @@ a {
   grid-template-columns: 1fr 1.1fr 0.75fr 0.65fr auto;
 }
 
+.person-row-unit {
+  grid-template-columns: 1fr 1.1fr 0.75fr 0.55fr auto;
+}
+
 .equip-row-fixed {
   grid-template-columns: 1.4fr 0.5fr 0.65fr auto;
 }
@@ -367,10 +371,24 @@ a {
   grid-template-columns: 1.1fr 1.2fr 0.7fr auto;
 }
 
+.unit-row {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: end;
+  padding: 0.55rem;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
 .template-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.45rem;
+}
+
+.template-switch-3 {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .template-btn {
@@ -398,9 +416,15 @@ a {
   .person-row,
   .equip-row,
   .extra-row,
+  .unit-row,
   .person-row-fixed,
   .equip-row-fixed,
-  .extra-row-fixed {
+  .extra-row-fixed,
+  .person-row-unit {
+    grid-template-columns: 1fr;
+  }
+
+  .template-switch-3 {
     grid-template-columns: 1fr;
   }
 

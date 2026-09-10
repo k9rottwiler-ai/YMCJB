@@ -19,16 +19,20 @@ function formatDate(value: string): string {
 
 export function EstimateDocument({ input, computed }: Props) {
   const isFixed = input.templateType === "fixed";
+  const isUnit = input.templateType === "unit";
   const extras = computed.extras;
   const totals = computed.fixedTotals;
+  const unitTotals = computed.unitTotals;
+
+  const title = isFixed
+    ? "Job Estimate — Fixed Price | Not to Exceed"
+    : isUnit
+      ? "Job Estimate — Unit Price"
+      : "Job Estimate — Time and Equipment";
 
   return (
     <article className="doc" id="estimate-document">
-      <h1 className="doc-title">
-        {isFixed
-          ? "Job Estimate — Fixed Price | Not to Exceed"
-          : "Job Estimate — Time and Equipment"}
-      </h1>
+      <h1 className="doc-title">{title}</h1>
 
       <div className="doc-meta">
         <div>
@@ -40,9 +44,16 @@ export function EstimateDocument({ input, computed }: Props) {
         <div>
           <strong>Prepared by:</strong> {input.estimatorName || "—"}
         </div>
-        <div>
-          <strong>OT structure:</strong> {input.otStructure}
-        </div>
+        {isUnit ? (
+          <div>
+            <strong>Productivity factor:</strong>{" "}
+            {(unitTotals.productivityFactor * 100).toFixed(0)}%
+          </div>
+        ) : (
+          <div>
+            <strong>OT structure:</strong> {input.otStructure}
+          </div>
+        )}
         {isFixed ? (
           <div>
             <strong>Estimate risk:</strong>{" "}
@@ -102,8 +113,48 @@ export function EstimateDocument({ input, computed }: Props) {
         </p>
       </section>
 
+      {isUnit ? (
+        <section className="doc-block">
+          <h4>Unit schedule</h4>
+          {unitTotals.units.length === 0 ? (
+            <p className="empty">No unit activities entered.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Activity</th>
+                  <th>Unit ID</th>
+                  <th>Description</th>
+                  <th>UOM</th>
+                  <th>Manpower</th>
+                  <th>Equipment</th>
+                  <th>Unit rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unitTotals.units.map((row) => (
+                  <tr key={row.item}>
+                    <td>{row.item}</td>
+                    <td>{row.activity || "—"}</td>
+                    <td>{row.unitId || "—"}</td>
+                    <td>{row.description || "—"}</td>
+                    <td>{row.uom || "—"}</td>
+                    <td>{money(row.manpowerPrice)}</td>
+                    <td>{money(row.equipmentPrice)}</td>
+                    <td>
+                      <strong>{money(row.unitPrice)}</strong>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      ) : null}
+
       <section className="doc-block">
-        <h4>Personnel</h4>
+        <h4>{isUnit ? "Crew (rate basis)" : "Personnel"}</h4>
         {computed.personnel.length === 0 ? (
           <p className="empty">No personnel selected.</p>
         ) : isFixed ? (
@@ -137,6 +188,40 @@ export function EstimateDocument({ input, computed }: Props) {
                 </th>
                 <td>
                   <strong>{money(totals.personnelTotal)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        ) : isUnit ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Qty</th>
+                <th>40ST + 5OT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {computed.personnel.map((row) => (
+                <tr key={row.item}>
+                  <td>{row.item}</td>
+                  <td>{row.name || "—"}</td>
+                  <td>{row.role || "—"}</td>
+                  <td>{row.quantity || "—"}</td>
+                  <td>{money(row.st5ot)}/hr</td>
+                </tr>
+              ))}
+              <tr>
+                <th colSpan={4} style={{ textAlign: "right" }}>
+                  Blended labor
+                </th>
+                <td>
+                  <strong>{money(unitTotals.laborPerMin * 60, 2)}/hr</strong>
+                  <div className="muted">
+                    {money(unitTotals.laborPerMin, 4)}/min
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -204,6 +289,38 @@ export function EstimateDocument({ input, computed }: Props) {
                 </th>
                 <td>
                   <strong>{money(totals.equipmentTotal)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        ) : isUnit ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Equipment</th>
+                <th>Qty</th>
+                <th>Hourly (COL adj.)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {computed.equipment.map((row) => (
+                <tr key={row.item}>
+                  <td>{row.item}</td>
+                  <td>{row.name}</td>
+                  <td>{row.count}</td>
+                  <td>{money(row.adjustedHourly, 2)}</td>
+                </tr>
+              ))}
+              <tr>
+                <th colSpan={3} style={{ textAlign: "right" }}>
+                  Blended equipment
+                </th>
+                <td>
+                  <strong>{money(unitTotals.equipmentPerMin * 60, 2)}/hr</strong>
+                  <div className="muted">
+                    {money(unitTotals.equipmentPerMin, 4)}/min
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -410,7 +527,11 @@ export function EstimateDocument({ input, computed }: Props) {
         <p className="signatures-intro">
           By signing below, each party acknowledges review of this estimate and
           agrees to the{" "}
-          {isFixed ? "not-to-exceed price, scope, and terms" : "rates, scope, and terms"}{" "}
+          {isFixed
+            ? "not-to-exceed price, scope, and terms"
+            : isUnit
+              ? "unit rates, scope, and terms"
+              : "rates, scope, and terms"}{" "}
           stated herein, subject to any written amendments.
         </p>
         <div className="signatures-grid">

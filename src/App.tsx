@@ -73,18 +73,21 @@ function loadDemo(templateType: TemplateType = "te"): EstimateInput {
           name: "Jordan Lee",
           salary: 120000,
           estimatedWeeks: 4,
+          quantity: 1,
         },
         {
           role: "Foreman",
           name: "Casey Nguyen",
           salary: 95000,
           estimatedWeeks: 4,
+          quantity: 1,
         },
         {
           role: "Equipment Operator",
           name: "Riley Brooks",
           salary: 80000,
           estimatedWeeks: 3,
+          quantity: 1,
         },
       ],
       equipmentRows: [
@@ -121,6 +124,86 @@ function loadDemo(templateType: TemplateType = "te"): EstimateInput {
     };
   }
 
+  if (templateType === "unit") {
+    return {
+      ...shared,
+      projectScope:
+        "Provide unit-priced hydrovac and excavation support for pipeline integrity digs, including crew, trucks, and vacuum equipment priced per completed unit of work.",
+      mobilizationDate: base.estimateDate,
+      startDate: base.estimateDate,
+      finishDate: "",
+      closeOutDate: "",
+      otStructure: "40ST + 5OT Labor Contingency",
+      productivityFactor: 0.85,
+      unitLines: [
+        {
+          activity: "Hydrovac excavation",
+          unitId: "HV-01",
+          description: "Daylight and expose pipe to client specs",
+          uom: "EA",
+          productiveMins: 90,
+          nonProductiveMins: 30,
+          resourceCount: 3,
+          equipmentCount: 2,
+        },
+        {
+          activity: "Backfill & restore",
+          unitId: "BF-01",
+          description: "Backfill, compact, and restore surface",
+          uom: "EA",
+          productiveMins: 45,
+          nonProductiveMins: 15,
+          resourceCount: 2,
+          equipmentCount: 1,
+        },
+      ],
+      personnel: [
+        {
+          role: "Foreman",
+          name: "Casey Nguyen",
+          salary: 95000,
+          estimatedWeeks: "",
+          quantity: 1,
+        },
+        {
+          role: "Equipment Operator",
+          name: "Riley Brooks",
+          salary: 80000,
+          estimatedWeeks: "",
+          quantity: 2,
+        },
+        {
+          role: "Laborer",
+          name: "Sam Ortiz",
+          salary: 55000,
+          estimatedWeeks: "",
+          quantity: 1,
+        },
+      ],
+      equipmentRows: [
+        {
+          name: "3/4 Ton 4wd Truck",
+          count: 2,
+          customHourly: "",
+          estimatedWeeks: "",
+        },
+        {
+          name: "10K Mini Ex w/Trailer",
+          count: 1,
+          customHourly: "",
+          estimatedWeeks: "",
+        },
+      ],
+      extraItems: [
+        {
+          label: "Rental Equipment (Client Prior Approval Required)",
+          notes: "Vacuum truck as needed",
+          amount: "",
+        },
+      ],
+    };
+  }
+
   return {
     ...shared,
     projectScope:
@@ -136,18 +219,21 @@ function loadDemo(templateType: TemplateType = "te"): EstimateInput {
         name: "Jordan Lee",
         salary: 120000,
         estimatedWeeks: "",
+        quantity: 1,
       },
       {
         role: "Foreman",
         name: "Casey Nguyen",
         salary: 95000,
         estimatedWeeks: "",
+        quantity: 1,
       },
       {
         role: "Equipment Operator",
         name: "Riley Brooks",
         salary: 80000,
         estimatedWeeks: "",
+        quantity: 1,
       },
     ],
     equipmentRows: [
@@ -185,6 +271,7 @@ export default function App() {
     [estimate, reference],
   );
   const isFixed = estimate.templateType === "fixed";
+  const isUnit = estimate.templateType === "unit";
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(estimate));
@@ -202,25 +289,31 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  const brandKicker = isFixed
+    ? "Fixed Price · Not to Exceed"
+    : isUnit
+      ? "Unit Pricing"
+      : "Time & Equipment";
+
+  const brandSub = isFixed
+    ? "Build a not-to-exceed job estimate from weeks, wage-schedule rates, COL, per diem, estimate risk, and contingency — then print the client sheet."
+    : isUnit
+      ? "Build unit-priced job estimates from productive time, productivity factor, crew quantities, and equipment blends — then print the client unit schedule."
+      : "Build job estimates with wage-schedule pricing, cost-of-living adjustments, equipment rates, and GSA-based per diem — then print the client-facing sheet.";
+
   return (
     <AuthGate>
     <div className="app-shell">
       <header className="app-header no-print">
         <div className="brand-block">
           <div className="brand-kicker">
-            {view === "admin"
-              ? "Rates · Per Diem · COL"
-              : isFixed
-                ? "Fixed Price · Not to Exceed"
-                : "Time & Equipment"}
+            {view === "admin" ? "Rates · Per Diem · COL" : brandKicker}
           </div>
           <h1 className="brand-title">BidSheet</h1>
           <p className="brand-sub">
             {view === "admin"
               ? "Maintain wage schedule rates, equipment catalog rates, GSA per diem, and cost-of-living indexes. Download CSV/JSON templates or edit inline."
-              : isFixed
-                ? "Build a not-to-exceed job estimate from weeks, wage-schedule rates, COL, per diem, estimate risk, and contingency — then print the client sheet."
-                : "Build job estimates with wage-schedule pricing, cost-of-living adjustments, equipment rates, and GSA-based per diem — then print the client-facing sheet."}
+              : brandSub}
           </p>
         </div>
         <div className="header-actions">
@@ -232,6 +325,12 @@ export default function App() {
               {isFixed ? (
                 <span className="meta-chip meta-chip-accent">
                   NTE {money(computed.fixedTotals.grandTotal)}
+                </span>
+              ) : null}
+              {isUnit && computed.unitTotals.units.length > 0 ? (
+                <span className="meta-chip meta-chip-accent">
+                  {computed.unitTotals.units.length} unit
+                  {computed.unitTotals.units.length === 1 ? "" : "s"}
                 </span>
               ) : null}
               <button
@@ -312,6 +411,15 @@ export default function App() {
                 >
                   Fixed Price
                 </button>
+                <button
+                  type="button"
+                  className={`tab ${estimate.templateType === "unit" ? "active" : ""}`}
+                  onClick={() =>
+                    setEstimate((prev) => switchTemplateType(prev, "unit"))
+                  }
+                >
+                  Unit Pricing
+                </button>
               </div>
             </div>
             <EstimateForm value={estimate} onChange={setEstimate} />
@@ -333,7 +441,11 @@ export default function App() {
                   className={`tab ${tab === "summary" ? "active" : ""}`}
                   onClick={() => setTab("summary")}
                 >
-                  {isFixed ? "Price summary" : "Rate summary"}
+                  {isFixed
+                    ? "Price summary"
+                    : isUnit
+                      ? "Unit summary"
+                      : "Rate summary"}
                 </button>
               </div>
             </div>

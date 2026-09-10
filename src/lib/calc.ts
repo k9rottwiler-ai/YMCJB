@@ -3,6 +3,7 @@ import type {
   ComputedEstimate,
   ComputedFixedTotals,
   ComputedPersonnel,
+  ComputedUnitTotals,
   EquipmentSlot,
   EstimateInput,
   ExtraItem,
@@ -10,6 +11,7 @@ import type {
   PersonnelSlot,
   ProfitTier,
   TemplateType,
+  UnitLine,
 } from "./types";
 import { getReference, type EquipmentRow, type StateRow, type WageRow } from "./reference";
 
@@ -56,6 +58,8 @@ export const EXTRA_ITEM_PRESETS = [
 ] as const;
 
 export const HOURS_PER_WEEK = 40;
+export const MAX_UNIT_LINES = 10;
+export const DEFAULT_PRODUCTIVITY_FACTOR = 0.85;
 
 function asNumber(value: number | "" | null | undefined, fallback = 0): number {
   if (value === "" || value == null) return fallback;
@@ -68,8 +72,14 @@ function riskFactorFromPct(pctValue: number | ""): number {
   return 1 + pctNum / 100;
 }
 
+/** Excel ROUNDUP(value, 0) — away from zero for positive amounts. */
+function roundUp(value: number): number {
+  if (!Number.isFinite(value) || value === 0) return 0;
+  return Math.ceil(value);
+}
+
 export function emptyPersonnelSlot(): PersonnelSlot {
-  return { role: "", name: "", salary: "", estimatedWeeks: "" };
+  return { role: "", name: "", salary: "", estimatedWeeks: "", quantity: 1 };
 }
 
 export function emptyEquipmentSlot(): EquipmentSlot {
@@ -80,12 +90,31 @@ export function emptyExtraItem(): ExtraItem {
   return { label: "", notes: "", amount: "" };
 }
 
+export function emptyUnitLine(): UnitLine {
+  return {
+    activity: "",
+    unitId: "",
+    description: "",
+    uom: "",
+    productiveMins: "",
+    nonProductiveMins: "",
+    resourceCount: "",
+    equipmentCount: "",
+  };
+}
+
 export function createEmptyPersonnel(): PersonnelSlot[] {
   return [emptyPersonnelSlot()];
 }
 
+export function createEmptyUnitLines(): UnitLine[] {
+  return [emptyUnitLine()];
+}
+
 export function estimateNumberPrefix(templateType: TemplateType): string {
-  return templateType === "fixed" ? "FP" : "TE";
+  if (templateType === "fixed") return "FP";
+  if (templateType === "unit") return "UP";
+  return "TE";
 }
 
 export function createDefaultEstimate(
@@ -116,11 +145,16 @@ export function createDefaultEstimate(
     otStructure:
       templateType === "fixed"
         ? "40ST + 10OT Labor Contingency"
-        : "OT Billed Separately",
+        : templateType === "unit"
+          ? "40ST + 5OT Labor Contingency"
+          : "OT Billed Separately",
     stProfit: "MED",
     otProfit: "MED",
     estimateRiskPct: templateType === "fixed" ? 10 : "",
     contingencyPct: templateType === "fixed" ? 5 : "",
+    productivityFactor:
+      templateType === "unit" ? DEFAULT_PRODUCTIVITY_FACTOR : "",
+    unitLines: templateType === "unit" ? createEmptyUnitLines() : [],
     personnel: createEmptyPersonnel(),
     equipmentRows: [],
     includeLodging: true,
@@ -149,7 +183,11 @@ export function normalizeEstimate(raw: unknown): EstimateInput {
   };
 
   const templateType: TemplateType =
-    parsed.templateType === "fixed" ? "fixed" : "te";
+    parsed.templateType === "fixed"
+      ? "fixed"
+      : parsed.templateType === "unit"
+        ? "unit"
+        : "te";
   const base = createDefaultEstimate(templateType);
 
   let equipmentRows = Array.isArray(parsed.equipmentRows)
@@ -219,8 +257,37 @@ export function normalizeEstimate(raw: unknown): EstimateInput {
             slot?.estimatedWeeks === "" || slot?.estimatedWeeks == null
               ? ("" as const)
               : Number(slot.estimatedWeeks),
+          quantity:
+            slot?.quantity === "" || slot?.quantity == null
+              ? (1 as const)
+              : Math.max(0, Number(slot.quantity) || 0),
         }))
       : createEmptyPersonnel();
+
+  const unitLines = Array.isArray(parsed.unitLines)
+    ? parsed.unitLines.slice(0, MAX_UNIT_LINES).map((row) => ({
+        activity: row?.activity ?? "",
+        unitId: row?.unitId ?? "",
+        description: row?.description ?? "",
+        uom: row?.uom ?? "",
+        productiveMins:
+          row?.productiveMins === "" || row?.productiveMins == null
+            ? ("" as const)
+            : Number(row.productiveMins),
+        nonProductiveMins:
+          row?.nonProductiveMins === "" || row?.nonProductiveMins == null
+            ? ("" as const)
+            : Number(row.nonProductiveMins),
+        resourceCount:
+          row?.resourceCount === "" || row?.resourceCount == null
+            ? ("" as const)
+            : Number(row.resourceCount),
+        equipmentCount:
+          row?.equipmentCount === "" || row?.equipmentCount == null
+            ? ("" as const)
+            : Number(row.equipmentCount),
+      }))
+    : base.unitLines;
 
   return {
     ...base,
@@ -234,6 +301,10 @@ export function normalizeEstimate(raw: unknown): EstimateInput {
       parsed.contingencyPct === "" || parsed.contingencyPct == null
         ? base.contingencyPct
         : Number(parsed.contingencyPct),
+    productivityFactor:
+      parsed.productivityFactor === "" || parsed.productivityFactor == null
+        ? base.productivityFactor
+        : Number(parsed.productivityFactor),
     lodgingRooms:
       parsed.lodgingRooms === "" || parsed.lodgingRooms == null
         ? base.lodgingRooms
@@ -253,6 +324,7 @@ export function normalizeEstimate(raw: unknown): EstimateInput {
     includeChangeOrderTerm:
       parsed.includeChangeOrderTerm ?? base.includeChangeOrderTerm,
     personnel,
+    unitLines,
     equipmentRows: equipmentRows ?? [],
     extraItems: extraItems ?? [],
     additionalTerms: Array.isArray(parsed.additionalTerms)
@@ -329,6 +401,7 @@ function computePersonnel(
       }
 
       const estimatedWeeks = Math.max(0, asNumber(slot.estimatedWeeks));
+      const quantity = Math.max(0, asNumber(slot.quantity, 1));
       const baseHours = estimatedWeeks * HOURS_PER_WEEK;
       const adjustedHours = isFixed ? baseHours * riskFactor : baseHours;
       const nteRate = isFixed
@@ -351,6 +424,7 @@ function computePersonnel(
         billedOt,
         nteRate,
         estimatedWeeks,
+        quantity,
         baseHours,
         adjustedHours,
         estimateAmount,
@@ -411,6 +485,105 @@ function computeEquipment(
     .map((row, index) => ({ ...row, item: `E${index + 1}` }));
 }
 
+function computeUnitTotals(
+  input: EstimateInput,
+  personnel: ComputedPersonnel[],
+  equipment: ComputedEquipment[],
+): ComputedUnitTotals {
+  const productivityFactor = Math.min(
+    1,
+    Math.max(0, asNumber(input.productivityFactor, DEFAULT_PRODUCTIVITY_FACTOR)),
+  );
+
+  // Excel: Y93 = SUMIF(Y85:Y91,">1",...); Y94 = SUM(qty); Y95 = Y93/Y94; Y97 = Y95/60
+  let extendedLabor = 0;
+  let crewQuantity = 0;
+  for (const row of personnel) {
+    const qty = Math.max(0, row.quantity);
+    crewQuantity += qty;
+    const extended = row.st5ot * qty;
+    if (extended > 1) extendedLabor += extended;
+  }
+  const laborPerHour = crewQuantity > 0 ? extendedLabor / crewQuantity : 0;
+  const laborPerMin = laborPerHour / 60;
+
+  // Excel: T74 = SUMIF(extended,">1"); T76 = SUM(qty); T77 = (T74/60)/T76
+  let extendedEquip = 0;
+  let equipmentQuantity = 0;
+  for (const row of equipment) {
+    const qty = Math.max(0, row.count);
+    equipmentQuantity += qty;
+    const extended = row.adjustedHourly * qty;
+    if (extended > 1) extendedEquip += extended;
+  }
+  const equipmentPerMin =
+    equipmentQuantity > 0 ? extendedEquip / 60 / equipmentQuantity : 0;
+
+  const units = input.unitLines
+    .map((line, index) => {
+      const activity = line.activity.trim();
+      const unitId = line.unitId.trim();
+      const description = line.description.trim();
+      const uom = line.uom.trim();
+      const productiveMins = Math.max(0, asNumber(line.productiveMins));
+      const nonProductiveMins = Math.max(0, asNumber(line.nonProductiveMins));
+      const resourceCount = Math.max(0, asNumber(line.resourceCount));
+      const equipmentCount = Math.max(0, asNumber(line.equipmentCount));
+
+      const hasContent =
+        activity ||
+        unitId ||
+        description ||
+        uom ||
+        productiveMins > 0 ||
+        nonProductiveMins > 0 ||
+        resourceCount > 0 ||
+        equipmentCount > 0;
+      if (!hasContent) return null;
+
+      // S = (P+Q) + ((1-R)*(P+Q)) = (P+Q)*(2-R)
+      const totalTimeMins =
+        (productiveMins + nonProductiveMins) * (2 - productivityFactor);
+      const blendedLaborRate = laborPerMin * resourceCount;
+      // W = ROUNDUP(S * (T * V)) with V = laborPerMin * T → S * T² * laborPerMin
+      const manpowerPrice = roundUp(
+        totalTimeMins * (resourceCount * blendedLaborRate),
+      );
+      const equipmentPrice = roundUp(
+        equipmentCount * equipmentPerMin * totalTimeMins,
+      );
+      const unitPrice = manpowerPrice + equipmentPrice;
+
+      return {
+        item: `U${index + 1}`,
+        activity,
+        unitId: unitId || `U${index + 1}`,
+        description,
+        uom,
+        productiveMins,
+        nonProductiveMins,
+        productivityFactor,
+        totalTimeMins,
+        resourceCount,
+        equipmentCount,
+        blendedLaborRate,
+        manpowerPrice,
+        equipmentPrice,
+        unitPrice,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+
+  return {
+    productivityFactor,
+    laborPerMin,
+    equipmentPerMin,
+    crewQuantity,
+    equipmentQuantity,
+    units,
+  };
+}
+
 export function computeEstimate(input: EstimateInput): ComputedEstimate {
   const base = findState(input.baseState);
   const project = findState(input.projectState);
@@ -418,6 +591,7 @@ export function computeEstimate(input: EstimateInput): ComputedEstimate {
   const projectCol = project?.colIndex ?? 100;
   const colDelta = (projectCol - baseCol) / 100;
   const isFixed = input.templateType === "fixed";
+  const isUnit = input.templateType === "unit";
   const riskFactor = isFixed ? riskFactorFromPct(input.estimateRiskPct) : 1;
 
   const lodgingDaily = project?.lodging ?? 113;
@@ -446,6 +620,16 @@ export function computeEstimate(input: EstimateInput): ComputedEstimate {
 
   const personnel = computePersonnel(input, colDelta, riskFactor);
   const equipment = computeEquipment(input, colDelta, riskFactor);
+  const unitTotals = isUnit
+    ? computeUnitTotals(input, personnel, equipment)
+    : {
+        productivityFactor: 0,
+        laborPerMin: 0,
+        equipmentPerMin: 0,
+        crewQuantity: 0,
+        equipmentQuantity: 0,
+        units: [],
+      };
 
   const extras = input.extraItems
     .filter((row) => row.label.trim() || row.notes.trim() || asNumber(row.amount))
@@ -516,6 +700,7 @@ export function computeEstimate(input: EstimateInput): ComputedEstimate {
     },
     extras,
     fixedTotals,
+    unitTotals,
     terms,
   };
 }
@@ -548,7 +733,7 @@ export function switchTemplateType(
   const today = current.estimateDate || new Date().toISOString().slice(0, 10);
   const numberLooksAuto =
     !current.estimateNumber ||
-    /^(TE|FP)-\d{8}-\d+$/.test(current.estimateNumber);
+    /^(TE|FP|UP)-\d{8}-\d+$/.test(current.estimateNumber);
 
   return {
     ...current,
@@ -556,6 +741,10 @@ export function switchTemplateType(
     estimateNumber: numberLooksAuto
       ? `${prefix}-${today.replaceAll("-", "")}-001`
       : current.estimateNumber,
+    otStructure:
+      templateType === "unit"
+        ? "40ST + 5OT Labor Contingency"
+        : current.otStructure,
     // Keep OT structure and holiday-term preference intact across switches so
     // previewing Fixed Price does not rewrite the T&E rate sheet settings.
     estimateRiskPct:
@@ -570,6 +759,18 @@ export function switchTemplateType(
           ? 5
           : ""
         : current.contingencyPct,
+    productivityFactor:
+      current.productivityFactor === "" || current.productivityFactor == null
+        ? templateType === "unit"
+          ? DEFAULT_PRODUCTIVITY_FACTOR
+          : ""
+        : current.productivityFactor,
+    unitLines:
+      current.unitLines.length > 0
+        ? current.unitLines
+        : templateType === "unit"
+          ? createEmptyUnitLines()
+          : current.unitLines,
     lodgingRooms:
       current.lodgingRooms === "" || current.lodgingRooms == null
         ? templateType === "fixed"
@@ -582,6 +783,8 @@ export function switchTemplateType(
           ? Math.max(1, current.personnel.filter((p) => p.role || p.name).length)
           : ""
         : current.mealsEmployees,
+    includeHolidayTerm:
+      templateType === "te" ? true : current.includeHolidayTerm,
     includeChangeOrderTerm:
       templateType === "fixed" ? true : current.includeChangeOrderTerm,
   };
