@@ -394,6 +394,22 @@ export function EstimateForm({ value, onChange }: Props) {
             />
           </div>
           <div className="field">
+            <label htmlFor="customerContactName">Point of contact name</label>
+            <input
+              id="customerContactName"
+              value={value.customerContactName}
+              placeholder="e.g. Morgan Ellis"
+              onChange={(e) =>
+                updateField(
+                  value,
+                  onChange,
+                  "customerContactName",
+                  e.target.value,
+                )
+              }
+            />
+          </div>
+          <div className="field">
             <label htmlFor="projectAddress">Project address</label>
             <input
               id="projectAddress"

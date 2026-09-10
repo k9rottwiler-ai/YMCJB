@@ -132,6 +132,7 @@ export function createDefaultEstimate(
     estimateDate: today,
     estimateNumber: `${prefix}-${today.replaceAll("-", "")}-001`,
     customerName: "",
+    customerContactName: "",
     projectAddress: "",
     clientPhone: "",
     clientEmail: "",
@@ -293,6 +294,10 @@ export function normalizeEstimate(raw: unknown): EstimateInput {
     ...base,
     ...parsed,
     templateType,
+    customerContactName:
+      typeof parsed.customerContactName === "string"
+        ? parsed.customerContactName
+        : base.customerContactName,
     estimateRiskPct:
       parsed.estimateRiskPct === "" || parsed.estimateRiskPct == null
         ? base.estimateRiskPct

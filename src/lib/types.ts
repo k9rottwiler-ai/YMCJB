@@ -60,6 +60,8 @@ export interface EstimateInput {
   estimateDate: string;
   estimateNumber: string;
   customerName: string;
+  /** Customer point of contact name. */
+  customerContactName: string;
   projectAddress: string;
   clientPhone: string;
   clientEmail: string;

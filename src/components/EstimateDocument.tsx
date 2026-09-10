@@ -72,6 +72,10 @@ export function EstimateDocument({ input, computed }: Props) {
               <td>{input.customerName || "—"}</td>
             </tr>
             <tr>
+              <th>Point of contact</th>
+              <td>{input.customerContactName || "—"}</td>
+            </tr>
+            <tr>
               <th>Address</th>
               <td>{input.projectAddress || "—"}</td>
             </tr>
@@ -561,7 +565,7 @@ export function EstimateDocument({ input, computed }: Props) {
             <div className="signature-line">
               <span>Printed name</span>
               <strong className="signature-prefill">
-                {input.customerName || "\u00a0"}
+                {input.customerContactName || input.customerName || "\u00a0"}
               </strong>
             </div>
             <div className="signature-line">
