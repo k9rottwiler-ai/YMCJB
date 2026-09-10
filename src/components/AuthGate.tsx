@@ -38,7 +38,7 @@ export function AuthGate({ children }: Props) {
     <div className="auth-shell">
       <form className="auth-card" onSubmit={onSubmit}>
         <div className="auth-brand">
-          <div className="brand-kicker">Young · BidSheet</div>
+          <div className="brand-kicker">Young Management &amp; Consulting</div>
           <h1 className="brand-title">BidSheet</h1>
           <p className="brand-sub">
             Enter the site password to open estimates and administration.
