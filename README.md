@@ -17,11 +17,11 @@ Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** te
 
 ## Web app
 
-**Stable app URL:** https://k9rottwiler-ai.github.io/YMCJB/
+**Railway (production):** https://ymcjb-production.up.railway.app/
 
-GitHub Pages is enabled from the `gh-pages` branch (includes Administration, T&E, and Fixed Price).
+**GitHub Pages:** https://k9rottwiler-ai.github.io/YMCJB/
 
-> Ephemeral Cloudflare preview tunnels expire when the agent session ends — use the Pages URL above.
+> Prefer Railway for the primary shareable URL. Redeploy from the latest branch if Administration is missing (older builds only have T&E + Fixed Price).
 
 ## Run locally
 
