@@ -1,4 +1,4 @@
-export type TemplateType = "te" | "fixed";
+export type TemplateType = "te" | "fixed" | "unit";
 
 export type ProfitTier =
   | "MINIMUM"
@@ -19,6 +19,19 @@ export interface PersonnelSlot {
   salary: number | "";
   /** Fixed Price: estimated weeks on the job (hours = weeks × 40). */
   estimatedWeeks: number | "";
+  /** Unit Pricing: headcount for this role in the blended crew rate. */
+  quantity: number | "";
+}
+
+export interface UnitLine {
+  activity: string;
+  unitId: string;
+  description: string;
+  uom: string;
+  productiveMins: number | "";
+  nonProductiveMins: number | "";
+  resourceCount: number | "";
+  equipmentCount: number | "";
 }
 
 export interface EquipmentSlot {
@@ -64,6 +77,13 @@ export interface EstimateInput {
   estimateRiskPct: number | "";
   /** Fixed Price: completion bonus / contingency as percent of subtotal. */
   contingencyPct: number | "";
+  /**
+   * Unit Pricing: productivity factor as a decimal (e.g. 0.85 = 85%).
+   * Total time mins = (prod + nonProd) × (2 − factor).
+   */
+  productivityFactor: number | "";
+  /** Unit Pricing: up to 10 priced unit activities. */
+  unitLines: UnitLine[];
   personnel: PersonnelSlot[];
   equipmentRows: EquipmentSlot[];
   includeLodging: boolean;
@@ -96,6 +116,8 @@ export interface ComputedPersonnel {
   /** Rate used for Fixed Price NTE amount (blended when applicable). */
   nteRate: number;
   estimatedWeeks: number;
+  /** Unit Pricing: headcount contributing to the blended crew rate. */
+  quantity: number;
   baseHours: number;
   adjustedHours: number;
   estimateAmount: number;
@@ -145,6 +167,33 @@ export interface ComputedFixedTotals {
   contingencyPct: number;
 }
 
+export interface ComputedUnitLine {
+  item: string;
+  activity: string;
+  unitId: string;
+  description: string;
+  uom: string;
+  productiveMins: number;
+  nonProductiveMins: number;
+  productivityFactor: number;
+  totalTimeMins: number;
+  resourceCount: number;
+  equipmentCount: number;
+  blendedLaborRate: number;
+  manpowerPrice: number;
+  equipmentPrice: number;
+  unitPrice: number;
+}
+
+export interface ComputedUnitTotals {
+  productivityFactor: number;
+  laborPerMin: number;
+  equipmentPerMin: number;
+  crewQuantity: number;
+  equipmentQuantity: number;
+  units: ComputedUnitLine[];
+}
+
 export interface ComputedEstimate {
   colDelta: number;
   baseCol: number;
@@ -154,5 +203,6 @@ export interface ComputedEstimate {
   perDiem: ComputedPerDiem;
   extras: { label: string; notes: string; amount: number }[];
   fixedTotals: ComputedFixedTotals;
+  unitTotals: ComputedUnitTotals;
   terms: string[];
 }

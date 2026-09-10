@@ -4,12 +4,15 @@ import type {
   ExtraItem,
   PersonnelSlot,
   TemplateType,
+  UnitLine,
 } from "../lib/types";
 import {
   EXTRA_ITEM_PRESETS,
+  MAX_UNIT_LINES,
   emptyEquipmentSlot,
   emptyExtraItem,
   emptyPersonnelSlot,
+  emptyUnitLine,
   salaryOptions,
   switchTemplateType,
 } from "../lib/calc";
@@ -65,9 +68,30 @@ function updateExtraItem(
   onChange({ ...value, extraItems });
 }
 
+function updateUnitLine(
+  value: EstimateInput,
+  onChange: Props["onChange"],
+  index: number,
+  patch: Partial<UnitLine>,
+) {
+  const unitLines = value.unitLines.map((row, i) =>
+    i === index ? { ...row, ...patch } : row,
+  );
+  onChange({ ...value, unitLines });
+}
+
 function parseOptionalNumber(raw: string): number | "" {
   if (raw === "") return "";
   return Math.max(0, Number(raw) || 0);
+}
+
+function parseProductivityFactor(raw: string): number | "" {
+  if (raw === "") return "";
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return "";
+  // Accept either 0.85 or 85 as input; store as decimal 0–1.
+  const factor = n > 1 ? n / 100 : n;
+  return Math.min(1, Math.max(0, factor));
 }
 
 export function EstimateForm({ value, onChange }: Props) {
@@ -75,6 +99,7 @@ export function EstimateForm({ value, onChange }: Props) {
   const salaries = salaryOptions();
   const catalogNames = new Set(reference.equipment.map((eq) => eq.name));
   const isFixed = value.templateType === "fixed";
+  const isUnit = value.templateType === "unit";
   const STATES = reference.states;
   const EQUIPMENT_CATALOG = reference.equipment;
   const OT_STRUCTURES = reference.otStructures;
@@ -84,11 +109,16 @@ export function EstimateForm({ value, onChange }: Props) {
     <div className="panel-body">
       <section className="section">
         <h3>Template</h3>
-        <div className="template-switch" role="group" aria-label="Estimate template">
+        <div
+          className="template-switch template-switch-3"
+          role="group"
+          aria-label="Estimate template"
+        >
           {(
             [
               ["te", "Time & Equipment"],
               ["fixed", "Fixed Price"],
+              ["unit", "Unit Pricing"],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -106,7 +136,9 @@ export function EstimateForm({ value, onChange }: Props) {
         <p className="hint">
           {isFixed
             ? "Fixed Price builds a not-to-exceed total from weeks, estimate risk, and contingency — matching the Fixed Price Excel workbook."
-            : "Time & Equipment publishes unit rates for labor, equipment, and per diem without a locked grand total."}
+            : isUnit
+              ? "Unit Pricing builds per-unit rates from productive/non-productive minutes, productivity factor, crew quantities, and equipment — matching the Unit Pricing Excel workbook."
+              : "Time & Equipment publishes unit rates for labor, equipment, and per diem without a locked grand total."}
         </p>
       </section>
 
@@ -171,27 +203,52 @@ export function EstimateForm({ value, onChange }: Props) {
               }
             />
           </div>
-          <div className="field">
-            <label htmlFor="otStructure">OT rate structure</label>
-            <select
-              id="otStructure"
-              value={value.otStructure}
-              onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "otStructure",
-                  e.target.value as EstimateInput["otStructure"],
-                )
-              }
-            >
-              {OT_STRUCTURES.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!isUnit ? (
+            <div className="field">
+              <label htmlFor="otStructure">OT rate structure</label>
+              <select
+                id="otStructure"
+                value={value.otStructure}
+                onChange={(e) =>
+                  updateField(
+                    value,
+                    onChange,
+                    "otStructure",
+                    e.target.value as EstimateInput["otStructure"],
+                  )
+                }
+              >
+                {OT_STRUCTURES.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="field">
+              <label htmlFor="productivityFactor">Productivity factor</label>
+              <input
+                id="productivityFactor"
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={value.productivityFactor}
+                onChange={(e) =>
+                  updateField(
+                    value,
+                    onChange,
+                    "productivityFactor",
+                    parseProductivityFactor(e.target.value),
+                  )
+                }
+              />
+              <div className="muted field-note">
+                Decimal (e.g. 0.85). Total mins = (prod + non-prod) × (2 − factor).
+              </div>
+            </div>
+          )}
           <div className="field">
             <label htmlFor="stProfit">ST profit tier</label>
             <select
@@ -315,6 +372,11 @@ export function EstimateForm({ value, onChange }: Props) {
             the estimate subtotal. Prefer a blended OT contingency structure for
             Fixed Price NTE labor rates.
           </p>
+        ) : isUnit ? (
+          <p className="hint">
+            Unit rates use the 40ST + 5OT blended crew rate. Productivity factor
+            scales total minutes for each unit activity.
+          </p>
         ) : null}
       </section>
 
@@ -425,6 +487,175 @@ export function EstimateForm({ value, onChange }: Props) {
         </div>
       </section>
 
+      {isUnit ? (
+        <section className="section">
+          <div className="section-head">
+            <div>
+              <h3>Unit activities</h3>
+              <p className="hint">
+                Add up to {MAX_UNIT_LINES} unit lines. Resource and equipment
+                counts drive each unit&apos;s manpower and equipment price.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-small"
+              disabled={value.unitLines.length >= MAX_UNIT_LINES}
+              onClick={() =>
+                onChange({
+                  ...value,
+                  unitLines: [...value.unitLines, emptyUnitLine()],
+                })
+              }
+            >
+              Add unit
+            </button>
+          </div>
+          <div className="grid">
+            {value.unitLines.length === 0 ? (
+              <p className="hint">No unit activities yet.</p>
+            ) : null}
+            {value.unitLines.map((line, index) => (
+              <div className="unit-row" key={index}>
+                <div className="field">
+                  <label htmlFor={`unit-activity-${index}`}>
+                    Activity (U{index + 1})
+                  </label>
+                  <input
+                    id={`unit-activity-${index}`}
+                    value={line.activity}
+                    placeholder="e.g. Hydrovac excavation"
+                    onChange={(e) =>
+                      updateUnitLine(value, onChange, index, {
+                        activity: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`unit-id-${index}`}>Unit ID</label>
+                  <input
+                    id={`unit-id-${index}`}
+                    value={line.unitId}
+                    placeholder={`U${index + 1}`}
+                    onChange={(e) =>
+                      updateUnitLine(value, onChange, index, {
+                        unitId: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`unit-desc-${index}`}>Description</label>
+                  <input
+                    id={`unit-desc-${index}`}
+                    value={line.description}
+                    placeholder="Client-facing description"
+                    onChange={(e) =>
+                      updateUnitLine(value, onChange, index, {
+                        description: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`unit-uom-${index}`}>UOM</label>
+                  <input
+                    id={`unit-uom-${index}`}
+                    value={line.uom}
+                    placeholder="EA / LF / HR"
+                    onChange={(e) =>
+                      updateUnitLine(value, onChange, index, {
+                        uom: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`unit-prod-${index}`}>
+                    Productive time (mins)
+                  </label>
+                  <input
+                    id={`unit-prod-${index}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={line.productiveMins}
+                    onChange={(e) =>
+                      updateUnitLine(value, onChange, index, {
+                        productiveMins: parseOptionalNumber(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`unit-nonprod-${index}`}>
+                    Non-productive time (mins)
+                  </label>
+                  <input
+                    id={`unit-nonprod-${index}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={line.nonProductiveMins}
+                    onChange={(e) =>
+                      updateUnitLine(value, onChange, index, {
+                        nonProductiveMins: parseOptionalNumber(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`unit-res-${index}`}>Resource count</label>
+                  <input
+                    id={`unit-res-${index}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={line.resourceCount}
+                    onChange={(e) =>
+                      updateUnitLine(value, onChange, index, {
+                        resourceCount: parseOptionalNumber(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`unit-eq-${index}`}>Equipment count</label>
+                  <input
+                    id={`unit-eq-${index}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={line.equipmentCount}
+                    onChange={(e) =>
+                      updateUnitLine(value, onChange, index, {
+                        equipmentCount: parseOptionalNumber(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="row-actions">
+                  <button
+                    type="button"
+                    className="btn btn-small"
+                    disabled={value.unitLines.length <= 1}
+                    onClick={() =>
+                      onChange({
+                        ...value,
+                        unitLines: value.unitLines.filter((_, i) => i !== index),
+                      })
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="section">
         <div className="section-head">
           <div>
@@ -432,7 +663,9 @@ export function EstimateForm({ value, onChange }: Props) {
             <p className="hint">
               {isFixed
                 ? "Add manpower lines with estimated weeks. Hours = weeks × 40, then risk-adjusted for the NTE amount."
-                : "Add manpower lines as needed. Salary selects from the wage schedule; COL adjusts to the nearest $5,000 band."}
+                : isUnit
+                  ? "Add crew roles with quantity. Unit rates blend the 40ST + 5OT wage-schedule rate across headcount."
+                  : "Add manpower lines as needed. Salary selects from the wage schedule; COL adjusts to the nearest $5,000 band."}
             </p>
           </div>
           <button
@@ -451,7 +684,7 @@ export function EstimateForm({ value, onChange }: Props) {
         <div className="grid">
           {value.personnel.map((slot, index) => (
             <div
-              className={`person-row ${isFixed ? "person-row-fixed" : ""}`}
+              className={`person-row ${isFixed ? "person-row-fixed" : ""} ${isUnit ? "person-row-unit" : ""}`}
               key={index}
             >
               <div className="field">
@@ -517,6 +750,23 @@ export function EstimateForm({ value, onChange }: Props) {
                   />
                 </div>
               ) : null}
+              {isUnit ? (
+                <div className="field">
+                  <label htmlFor={`qty-${index}`}>Quantity</label>
+                  <input
+                    id={`qty-${index}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={slot.quantity}
+                    onChange={(e) =>
+                      updatePersonnel(value, onChange, index, {
+                        quantity: parseOptionalNumber(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
               <div className="row-actions">
                 <button
                   type="button"
@@ -544,7 +794,9 @@ export function EstimateForm({ value, onChange }: Props) {
             <p className="hint">
               {isFixed
                 ? "Add equipment with quantity and estimated weeks. NTE uses COL-adjusted weekly rate × qty × risk-adjusted weeks."
-                : "Add catalog or custom equipment lines. Custom rows need an hourly rate; catalog rates are COL-adjusted automatically."}
+                : isUnit
+                  ? "Add equipment with quantity. Unit equipment $/min is the COL-adjusted hourly blend across selected equipment."
+                  : "Add catalog or custom equipment lines. Custom rows need an hourly rate; catalog rates are COL-adjusted automatically."}
             </p>
           </div>
           <div className="section-actions">

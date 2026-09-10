@@ -1,19 +1,20 @@
 # YMCJB — BidSheet
 
-Job estimate webapp supporting **Time & Equipment** and **Fixed Price (NTE)** templates (recreated from the Excel workbooks).
+Job estimate webapp supporting **Time & Equipment**, **Fixed Price (NTE)**, and **Unit Pricing** templates (recreated from the Excel workbooks).
 
 ## Features
 
-- Template switcher: Time & Equipment rates sheet **or** Fixed Price not-to-exceed total
-- Estimate intake form (estimator, customer, scope, schedule, OT structure, profit tiers)
+- Template switcher: Time & Equipment rates sheet, Fixed Price not-to-exceed total, **or Unit Pricing schedule**
+- Estimate intake form (estimator, customer, scope, schedule, OT structure / productivity factor, profit tiers)
 - Add/remove personnel lines with wage-schedule salary bands and COL adjustment
 - Fixed Price: estimated weeks, estimate risk %, completion bonus / contingency %
+- Unit Pricing: unit activities (mins, resource/equipment counts), crew quantities, 40ST+5OT blend → unit rates
 - Add catalog or custom equipment lines with COL-adjusted hourly / daily / weekly rates
 - Add unlimited additional approval items plus GSA lodging & meals per diem by project state
 - **Administration** page to update wage rates, equipment rates, per diem, and COL indexes
 - CSV / JSON download templates + import; browser overrides with export for `reference.json`
 - Password protection (in-app unlock + optional Railway HTTP basic auth)
-- Live printable estimate document + rate / price summary
+- Live printable estimate document + rate / price / unit summary
 - Local browser persistence, demo data, JSON export
 
 ## Web app
