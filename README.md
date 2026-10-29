@@ -25,6 +25,19 @@ npm run build
 npm run preview
 ```
 
+## OOP layout
+
+Pricing logic is organized around classic OOP concepts:
+
+| Concept | Where |
+|--------|--------|
+| **Encapsulation** | `domain/entities`, `domain/valueObjects`, `catalogs/ReferenceCatalog` |
+| **Inheritance** | `domain/lineItems` — `LineItem` → `PersonnelLine` / `EquipmentLine` |
+| **Polymorphism** | `domain/strategies` — OT billing strategies |
+| **Abstraction** | `LineItem`, `OtBillingStrategy`, `services/*` (factory, calculator, storage) |
+
+React components stay presentational; `lib/calc.ts` and `lib/types.ts` remain thin façades for existing imports.
+
 ## Calculation notes
 
 Pricing logic mirrors the Excel workbook:

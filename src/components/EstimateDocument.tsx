@@ -1,4 +1,5 @@
 import { money, pct } from "../lib/calc";
+import { Formatters } from "../formatting/Formatters";
 import type { ComputedEstimate, EstimateInput } from "../lib/types";
 
 type Props = {
@@ -7,14 +8,7 @@ type Props = {
 };
 
 function formatDate(value: string): string {
-  if (!value) return "—";
-  const d = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return Formatters.date(value);
 }
 
 export function EstimateDocument({ input, computed }: Props) {
