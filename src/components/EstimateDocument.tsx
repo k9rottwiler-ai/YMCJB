@@ -1,23 +1,17 @@
-import { money, pct } from "../lib/calc";
-import type { ComputedEstimate, EstimateInput } from "../lib/types";
+import { Formatters } from "../formatting/Formatters";
+import type { EstimateInput } from "../domain/entities/Estimate";
+import type { ComputedEstimateSnapshot } from "../domain/results/ComputedEstimate";
 
 type Props = {
   input: EstimateInput;
-  computed: ComputedEstimate;
+  computed: ComputedEstimateSnapshot;
 };
 
-function formatDate(value: string): string {
-  if (!value) return "—";
-  const d = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export function EstimateDocument({ input, computed }: Props) {
+  const money = Formatters.money;
+  const pct = Formatters.pct;
+  const formatDate = Formatters.date;
+
   const extras = [
     {
       label: "Rental Vehicle (Client Prior Approval Required)",
