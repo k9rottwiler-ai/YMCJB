@@ -31,12 +31,16 @@ Pricing logic is organized around classic OOP concepts:
 
 | Concept | Where |
 |--------|--------|
-| **Encapsulation** | `domain/entities`, `domain/valueObjects`, `catalogs/ReferenceCatalog` |
+| **Encapsulation** | `domain/entities`, `domain/valueObjects`, `catalogs/ReferenceCatalog`, `services/EstimateDraft` |
 | **Inheritance** | `domain/lineItems` — `LineItem` → `PersonnelLine` / `EquipmentLine` |
 | **Polymorphism** | `domain/strategies` — OT billing strategies |
-| **Abstraction** | `LineItem`, `OtBillingStrategy`, `services/*` (factory, calculator, storage) |
+| **Abstraction** | `LineItem`, `OtBillingStrategy`, `services/*` (factory, calculator, storage, draft) |
 
-React components stay presentational; `lib/calc.ts` and `lib/types.ts` remain thin façades for existing imports.
+React components stay presentational and import from `domain/`, `services/`, `catalogs/`, and `formatting/`. `lib/calc.ts` and `lib/types.ts` remain thin compatibility façades.
+
+```bash
+npm test
+```
 
 ## Calculation notes
 

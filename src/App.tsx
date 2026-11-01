@@ -2,27 +2,22 @@ import { useEffect, useMemo, useState } from "react";
 import { EstimateDocument } from "./components/EstimateDocument";
 import { EstimateForm } from "./components/EstimateForm";
 import { RateSummary } from "./components/RateSummary";
-import {
-  computeEstimate,
-  createDefaultEstimate,
-  createDemoEstimate,
-  pct,
-} from "./lib/calc";
-import type { EstimateInput } from "./lib/types";
-import { EstimateStorage } from "./services/EstimateStorage";
+import type { EstimateInput } from "./domain/entities/Estimate";
+import { Formatters } from "./formatting/Formatters";
+import { EstimateCalculator } from "./services/EstimateCalculator";
 import { EstimateFactory } from "./services/EstimateFactory";
+import { EstimateStorage } from "./services/EstimateStorage";
 
-const storage = new EstimateStorage(
-  "bidsheet-te-estimate-v1",
-  new EstimateFactory(),
-);
+const factory = new EstimateFactory();
+const calculator = new EstimateCalculator();
+const storage = new EstimateStorage("bidsheet-te-estimate-v1", factory);
 
 type PreviewTab = "document" | "summary";
 
 export default function App() {
   const [estimate, setEstimate] = useState<EstimateInput>(() => storage.load());
   const [tab, setTab] = useState<PreviewTab>("document");
-  const computed = useMemo(() => computeEstimate(estimate), [estimate]);
+  const computed = useMemo(() => calculator.compute(estimate), [estimate]);
 
   useEffect(() => {
     storage.save(estimate);
@@ -42,19 +37,19 @@ export default function App() {
         </div>
         <div className="header-actions">
           <span className="meta-chip">
-            COL adj {pct(computed.colDelta)}
+            COL adj {Formatters.pct(computed.colDelta)}
           </span>
           <button
             type="button"
             className="btn"
-            onClick={() => setEstimate(createDemoEstimate())}
+            onClick={() => setEstimate(factory.createDemo())}
           >
             Load demo
           </button>
           <button
             type="button"
             className="btn"
-            onClick={() => setEstimate(createDefaultEstimate())}
+            onClick={() => setEstimate(factory.createEmpty())}
           >
             New estimate
           </button>

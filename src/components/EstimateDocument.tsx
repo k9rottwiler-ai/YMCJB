@@ -1,17 +1,17 @@
-import { money, pct } from "../lib/calc";
 import { Formatters } from "../formatting/Formatters";
-import type { ComputedEstimate, EstimateInput } from "../lib/types";
+import type { EstimateInput } from "../domain/entities/Estimate";
+import type { ComputedEstimateSnapshot } from "../domain/results/ComputedEstimate";
 
 type Props = {
   input: EstimateInput;
-  computed: ComputedEstimate;
+  computed: ComputedEstimateSnapshot;
 };
 
-function formatDate(value: string): string {
-  return Formatters.date(value);
-}
-
 export function EstimateDocument({ input, computed }: Props) {
+  const money = Formatters.money;
+  const pct = Formatters.pct;
+  const formatDate = Formatters.date;
+
   const extras = [
     {
       label: "Rental Vehicle (Client Prior Approval Required)",

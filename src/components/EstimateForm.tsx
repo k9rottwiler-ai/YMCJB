@@ -1,40 +1,16 @@
-import type { EstimateInput, PersonnelSlot } from "../lib/types";
-import {
-  EQUIPMENT_CATALOG,
-  OT_STRUCTURES,
-  PROFIT_TIERS,
-  STATES,
-  salaryOptions,
-} from "../lib/calc";
+import type { EstimateInput } from "../domain/entities/Estimate";
+import { ReferenceCatalog } from "../catalogs/ReferenceCatalog";
+import { EstimateDraft } from "../services/EstimateDraft";
 
 type Props = {
   value: EstimateInput;
   onChange: (next: EstimateInput) => void;
 };
 
-function updateField<K extends keyof EstimateInput>(
-  value: EstimateInput,
-  onChange: Props["onChange"],
-  key: K,
-  next: EstimateInput[K],
-) {
-  onChange({ ...value, [key]: next });
-}
-
-function updatePersonnel(
-  value: EstimateInput,
-  onChange: Props["onChange"],
-  index: number,
-  patch: Partial<PersonnelSlot>,
-) {
-  const personnel = value.personnel.map((row, i) =>
-    i === index ? { ...row, ...patch } : row,
-  );
-  onChange({ ...value, personnel });
-}
-
 export function EstimateForm({ value, onChange }: Props) {
-  const salaries = salaryOptions();
+  const catalog = ReferenceCatalog.getInstance();
+  const salaries = catalog.salaryOptions();
+  const draft = new EstimateDraft(value);
 
   return (
     <div className="panel-body">
@@ -47,7 +23,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="estimatorName"
               value={value.estimatorName}
               onChange={(e) =>
-                updateField(value, onChange, "estimatorName", e.target.value)
+                onChange(draft.setField("estimatorName", e.target.value))
               }
             />
           </div>
@@ -57,7 +33,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="estimatorPhone"
               value={value.estimatorPhone}
               onChange={(e) =>
-                updateField(value, onChange, "estimatorPhone", e.target.value)
+                onChange(draft.setField("estimatorPhone", e.target.value))
               }
             />
           </div>
@@ -68,7 +44,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="email"
               value={value.estimatorEmail}
               onChange={(e) =>
-                updateField(value, onChange, "estimatorEmail", e.target.value)
+                onChange(draft.setField("estimatorEmail", e.target.value))
               }
             />
           </div>
@@ -85,7 +61,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="date"
               value={value.estimateDate}
               onChange={(e) =>
-                updateField(value, onChange, "estimateDate", e.target.value)
+                onChange(draft.setField("estimateDate", e.target.value))
               }
             />
           </div>
@@ -95,7 +71,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="estimateNumber"
               value={value.estimateNumber}
               onChange={(e) =>
-                updateField(value, onChange, "estimateNumber", e.target.value)
+                onChange(draft.setField("estimateNumber", e.target.value))
               }
             />
           </div>
@@ -105,15 +81,15 @@ export function EstimateForm({ value, onChange }: Props) {
               id="otStructure"
               value={value.otStructure}
               onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "otStructure",
-                  e.target.value as EstimateInput["otStructure"],
+                onChange(
+                  draft.setField(
+                    "otStructure",
+                    e.target.value as EstimateInput["otStructure"],
+                  ),
                 )
               }
             >
-              {OT_STRUCTURES.map((opt) => (
+              {catalog.otStructures.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>
@@ -126,15 +102,15 @@ export function EstimateForm({ value, onChange }: Props) {
               id="stProfit"
               value={value.stProfit}
               onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "stProfit",
-                  e.target.value as EstimateInput["stProfit"],
+                onChange(
+                  draft.setField(
+                    "stProfit",
+                    e.target.value as EstimateInput["stProfit"],
+                  ),
                 )
               }
             >
-              {PROFIT_TIERS.map((opt) => (
+              {catalog.profitTiers.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>
@@ -147,15 +123,15 @@ export function EstimateForm({ value, onChange }: Props) {
               id="otProfit"
               value={value.otProfit}
               onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "otProfit",
-                  e.target.value as EstimateInput["otProfit"],
+                onChange(
+                  draft.setField(
+                    "otProfit",
+                    e.target.value as EstimateInput["otProfit"],
+                  ),
                 )
               }
             >
-              {PROFIT_TIERS.map((opt) => (
+              {catalog.profitTiers.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>
@@ -168,10 +144,10 @@ export function EstimateForm({ value, onChange }: Props) {
               id="baseState"
               value={value.baseState}
               onChange={(e) =>
-                updateField(value, onChange, "baseState", e.target.value)
+                onChange(draft.setField("baseState", e.target.value))
               }
             >
-              {STATES.map((s) => (
+              {catalog.states.map((s) => (
                 <option key={s.abbr} value={s.name}>
                   {s.name} ({s.colIndex})
                 </option>
@@ -184,10 +160,10 @@ export function EstimateForm({ value, onChange }: Props) {
               id="projectState"
               value={value.projectState}
               onChange={(e) =>
-                updateField(value, onChange, "projectState", e.target.value)
+                onChange(draft.setField("projectState", e.target.value))
               }
             >
-              {STATES.map((s) => (
+              {catalog.states.map((s) => (
                 <option key={s.abbr} value={s.name}>
                   {s.name} ({s.colIndex})
                 </option>
@@ -206,7 +182,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="customerName"
               value={value.customerName}
               onChange={(e) =>
-                updateField(value, onChange, "customerName", e.target.value)
+                onChange(draft.setField("customerName", e.target.value))
               }
             />
           </div>
@@ -216,7 +192,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="projectAddress"
               value={value.projectAddress}
               onChange={(e) =>
-                updateField(value, onChange, "projectAddress", e.target.value)
+                onChange(draft.setField("projectAddress", e.target.value))
               }
             />
           </div>
@@ -226,7 +202,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="clientPhone"
               value={value.clientPhone}
               onChange={(e) =>
-                updateField(value, onChange, "clientPhone", e.target.value)
+                onChange(draft.setField("clientPhone", e.target.value))
               }
             />
           </div>
@@ -237,7 +213,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="email"
               value={value.clientEmail}
               onChange={(e) =>
-                updateField(value, onChange, "clientEmail", e.target.value)
+                onChange(draft.setField("clientEmail", e.target.value))
               }
             />
           </div>
@@ -252,7 +228,7 @@ export function EstimateForm({ value, onChange }: Props) {
             id="projectScope"
             value={value.projectScope}
             onChange={(e) =>
-              updateField(value, onChange, "projectScope", e.target.value)
+              onChange(draft.setField("projectScope", e.target.value))
             }
           />
         </div>
@@ -264,7 +240,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="date"
               value={value.mobilizationDate}
               onChange={(e) =>
-                updateField(value, onChange, "mobilizationDate", e.target.value)
+                onChange(draft.setField("mobilizationDate", e.target.value))
               }
             />
           </div>
@@ -275,7 +251,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="date"
               value={value.startDate}
               onChange={(e) =>
-                updateField(value, onChange, "startDate", e.target.value)
+                onChange(draft.setField("startDate", e.target.value))
               }
             />
           </div>
@@ -286,7 +262,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="date"
               value={value.finishDate}
               onChange={(e) =>
-                updateField(value, onChange, "finishDate", e.target.value)
+                onChange(draft.setField("finishDate", e.target.value))
               }
             />
           </div>
@@ -297,7 +273,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="date"
               value={value.closeOutDate}
               onChange={(e) =>
-                updateField(value, onChange, "closeOutDate", e.target.value)
+                onChange(draft.setField("closeOutDate", e.target.value))
               }
             />
           </div>
@@ -320,9 +296,7 @@ export function EstimateForm({ value, onChange }: Props) {
                   value={slot.role}
                   placeholder="e.g. Superintendent"
                   onChange={(e) =>
-                    updatePersonnel(value, onChange, index, {
-                      role: e.target.value,
-                    })
+                    onChange(draft.patchPersonnel(index, { role: e.target.value }))
                   }
                 />
               </div>
@@ -333,9 +307,7 @@ export function EstimateForm({ value, onChange }: Props) {
                   value={slot.name}
                   placeholder="Optional"
                   onChange={(e) =>
-                    updatePersonnel(value, onChange, index, {
-                      name: e.target.value,
-                    })
+                    onChange(draft.patchPersonnel(index, { name: e.target.value }))
                   }
                 />
               </div>
@@ -345,9 +317,12 @@ export function EstimateForm({ value, onChange }: Props) {
                   id={`salary-${index}`}
                   value={slot.salary === "" ? "" : String(slot.salary)}
                   onChange={(e) =>
-                    updatePersonnel(value, onChange, index, {
-                      salary: e.target.value === "" ? "" : Number(e.target.value),
-                    })
+                    onChange(
+                      draft.patchPersonnel(index, {
+                        salary:
+                          e.target.value === "" ? "" : Number(e.target.value),
+                      }),
+                    )
                   }
                 >
                   <option value="">—</option>
@@ -366,7 +341,7 @@ export function EstimateForm({ value, onChange }: Props) {
       <section className="section">
         <h3>Equipment</h3>
         <div className="grid">
-          {EQUIPMENT_CATALOG.map((eq) => (
+          {catalog.equipment.map((eq) => (
             <div className="equip-row" key={eq.name}>
               <div>
                 <strong>{eq.name}</strong>
@@ -382,13 +357,12 @@ export function EstimateForm({ value, onChange }: Props) {
                   min={0}
                   value={value.equipmentCounts[eq.name] ?? 0}
                   onChange={(e) =>
-                    onChange({
-                      ...value,
-                      equipmentCounts: {
-                        ...value.equipmentCounts,
-                        [eq.name]: Math.max(0, Number(e.target.value) || 0),
-                      },
-                    })
+                    onChange(
+                      draft.setEquipmentCount(
+                        eq.name,
+                        Number(e.target.value) || 0,
+                      ),
+                    )
                   }
                 />
               </div>
@@ -406,7 +380,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="checkbox"
               checked={value.includeLodging}
               onChange={(e) =>
-                updateField(value, onChange, "includeLodging", e.target.checked)
+                onChange(draft.setField("includeLodging", e.target.checked))
               }
             />
             Include lodging per diem
@@ -416,7 +390,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="checkbox"
               checked={value.includeMeals}
               onChange={(e) =>
-                updateField(value, onChange, "includeMeals", e.target.checked)
+                onChange(draft.setField("includeMeals", e.target.checked))
               }
             />
             Include meals &amp; incidentals
@@ -431,7 +405,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="rentalVehicle"
               value={value.rentalVehicle}
               onChange={(e) =>
-                updateField(value, onChange, "rentalVehicle", e.target.value)
+                onChange(draft.setField("rentalVehicle", e.target.value))
               }
             />
           </div>
@@ -441,7 +415,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="airFare"
               value={value.airFare}
               onChange={(e) =>
-                updateField(value, onChange, "airFare", e.target.value)
+                onChange(draft.setField("airFare", e.target.value))
               }
             />
           </div>
@@ -453,7 +427,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="rentalEquipment"
               value={value.rentalEquipment}
               onChange={(e) =>
-                updateField(value, onChange, "rentalEquipment", e.target.value)
+                onChange(draft.setField("rentalEquipment", e.target.value))
               }
             />
           </div>
@@ -465,7 +439,7 @@ export function EstimateForm({ value, onChange }: Props) {
               id="supportPurchases"
               value={value.supportPurchases}
               onChange={(e) =>
-                updateField(value, onChange, "supportPurchases", e.target.value)
+                onChange(draft.setField("supportPurchases", e.target.value))
               }
             />
           </div>
@@ -477,11 +451,8 @@ export function EstimateForm({ value, onChange }: Props) {
               id="backgroundScreenings"
               value={value.backgroundScreenings}
               onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "backgroundScreenings",
-                  e.target.value,
+                onChange(
+                  draft.setField("backgroundScreenings", e.target.value),
                 )
               }
             />
@@ -497,12 +468,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="checkbox"
               checked={value.includeStandByTerm}
               onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "includeStandByTerm",
-                  e.target.checked,
-                )
+                onChange(draft.setField("includeStandByTerm", e.target.checked))
               }
             />
             Include stand-by time term
@@ -512,12 +478,7 @@ export function EstimateForm({ value, onChange }: Props) {
               type="checkbox"
               checked={value.includeHolidayTerm}
               onChange={(e) =>
-                updateField(
-                  value,
-                  onChange,
-                  "includeHolidayTerm",
-                  e.target.checked,
-                )
+                onChange(draft.setField("includeHolidayTerm", e.target.checked))
               }
             />
             Include federal holiday OT term
@@ -532,11 +493,9 @@ export function EstimateForm({ value, onChange }: Props) {
               <textarea
                 id={`term-${index}`}
                 value={term}
-                onChange={(e) => {
-                  const additionalTerms = [...value.additionalTerms];
-                  additionalTerms[index] = e.target.value;
-                  onChange({ ...value, additionalTerms });
-                }}
+                onChange={(e) =>
+                  onChange(draft.setAdditionalTerm(index, e.target.value))
+                }
               />
             </div>
           ))}

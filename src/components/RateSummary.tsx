@@ -1,12 +1,15 @@
-import { money } from "../lib/calc";
-import type { ComputedEstimate, EstimateInput } from "../lib/types";
+import { Formatters } from "../formatting/Formatters";
+import type { EstimateInput } from "../domain/entities/Estimate";
+import type { ComputedEstimateSnapshot } from "../domain/results/ComputedEstimate";
 
 type Props = {
   input: EstimateInput;
-  computed: ComputedEstimate;
+  computed: ComputedEstimateSnapshot;
 };
 
 export function RateSummary({ input, computed }: Props) {
+  const money = Formatters.money;
+
   return (
     <div className="summary-grid panel-body">
       <section className="summary-card">
